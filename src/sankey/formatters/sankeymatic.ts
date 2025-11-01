@@ -17,28 +17,6 @@ export function formatSankeyMatic(data: SankeyDiagram): string {
 
 `;
 
-  // Color mapping for different node types
-  const typeColors: { [key: string]: string } = {
-    revenue: '#28a745',    // Green for income
-    expense: '#dc3545',    // Red for expenses
-    asset: '#007bff',      // Blue for assets
-    category: '#ffc107',   // Yellow for categories
-    budget: '#17a2b8',     // Cyan for budgets
-  };
-
-  // Add node color declarations
-  const nodeSet = new Set<string>();
-  for (const node of data.nodes) {
-    if (!nodeSet.has(node.name)) {
-      nodeSet.add(node.name);
-      // Special color for "All Funds" central node
-      const color = node.name === 'All Funds' ? '#6610f2' : (typeColors[node.type] || '#6c757d');
-      output += `:${node.name} ${color}\n`;
-    }
-  }
-
-  output += '\n';
-
   // Categorize flows into sections
   const incomeToCategories: typeof data.links = [];
   const categoriesToAllFunds: typeof data.links = [];

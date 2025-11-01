@@ -152,13 +152,7 @@ Transform processed Sankey data into various output formats.
 
 **SankeyMatic Formatter** (`sankeymatic.ts`)
 - Outputs format compatible with https://sankeymatic.com/build/
-- Color-coded nodes by type:
-  - Revenue: Green (`#28a745`)
-  - Expense: Red (`#dc3545`)
-  - Asset: Blue (`#007bff`)
-  - Category: Yellow (`#ffc107`)
-  - Budget: Cyan (`#17a2b8`)
-  - All Funds: Purple (`#6610f2`)
+- Colors are automatically assigned by SankeyMatic
 - Organized into commented sections:
   1. Income Accounts → Income Categories
   2. Income → All Funds

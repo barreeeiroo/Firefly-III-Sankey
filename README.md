@@ -16,7 +16,7 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 - 📦 **Smart Grouping**: Aggregate small accounts and categories into "[OTHER]" buckets for cleaner visualizations
 - 🎯 **Duplicate Handling**: Automatically handles accounts that appear as both income and expense sources
 - 🔄 **Transfer Tracking**: Include transfer flows between asset accounts with `--with-assets` flag
-- 🌈 **Color Coded**: Different node types get distinct colors for easy identification
+- 🌈 **Auto-Colored**: SankeyMatic automatically assigns colors for easy visualization
 - 📅 **Date Range Support**: Analyze any time period with customizable start/end dates or use period shortcuts
 
 ## Table of Contents
@@ -470,13 +470,7 @@ Monthly Budget [500.00] Groceries
 Groceries [500.00] Supermarket (-)
 ```
 
-**Color Scheme:**
-- 🟢 Revenue Accounts (Green)
-- 🔴 Expense Accounts (Red)
-- 🔵 Asset Accounts (Blue)
-- 🟡 Categories (Yellow)
-- 🔵 Budgets (Cyan)
-- 🟣 All Funds (Purple)
+Colors are automatically assigned by SankeyMatic when you paste the output into https://sankeymatic.com/build/
 
 ### JSON Format
 
