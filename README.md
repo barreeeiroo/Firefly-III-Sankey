@@ -12,7 +12,7 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 - 📊 **Smart Aggregation**: All income flows through "All Funds", then distributes to expenses
 - 🎚️ **Granularity Control**: Choose between aggregated or account-level views; include/exclude categories and budgets
 - 🏷️ **Category & Budget Tracking**: Visualize how money flows through your budgets and categories
-- 🔍 **Flexible Filtering**: Exclude accounts, categories, or budgets; set minimum amounts
+- 🔍 **Flexible Filtering**: Exclude accounts, categories, or budgets; filter by transaction amounts or account totals
 - 🎯 **Duplicate Handling**: Automatically handles accounts that appear as both income and expense sources
 - 🚫 **Transfer Exclusion**: Ignores internal transfers between your own accounts
 - 🌈 **Color Coded**: Different node types get distinct colors for easy identification
@@ -238,13 +238,17 @@ firefly-iii-sankey -u https://firefly.example.com -t token \
 
 # Only show transactions above $50
 firefly-iii-sankey -u https://firefly.example.com -t token \
-  --min-amount 50
+  --min-amount-transaction 50
 
-# Combine filters
+# Show accounts with totals above $100 (requires --with-accounts)
 firefly-iii-sankey -u https://firefly.example.com -t token \
-  --exclude-accounts "Savings" \
-  --exclude-categories "Internal" \
-  --min-amount 10
+  --with-accounts --min-amount-account 100
+
+# Combine filters: show accounts with totals > $100, hiding small transactions
+firefly-iii-sankey -u https://firefly.example.com -t token \
+  --with-accounts \
+  --min-amount-transaction 10 \
+  --min-amount-account 100
 ```
 
 ### Output Formats
@@ -351,11 +355,14 @@ You can exclude these nodes entirely using `--no-categories` or `--no-budgets` f
 | `--exclude-accounts <list>` | | Comma-separated account names to exclude | - |
 | `--exclude-categories <list>` | | Comma-separated category names to exclude | - |
 | `--exclude-budgets <list>` | | Comma-separated budget names to exclude | - |
-| `--min-amount <amount>` | | Minimum transaction amount to include | - |
+| `--min-amount-transaction <amount>` | | Minimum transaction amount to include | - |
+| `--min-amount-account <amount>` | | Minimum total for accounts (requires `--with-accounts`) | - |
 | `--version` | `-V` | Show version number | - |
 | `--help` | `-h` | Show help | - |
 
-> **Note**: `--period` cannot be used together with `--start` or `--end`.
+**Notes:**
+- `--period` cannot be used together with `--start` or `--end`
+- `--min-amount-account` requires `--with-accounts` to be set
 
 ## Output Formats
 
@@ -478,7 +485,7 @@ firefly-iii-sankey \
   --format readable
 ```
 
-### Example 4: Significant Expenses Only
+### Example 4: Significant Transactions Only
 
 Focus on major transactions for the year:
 
@@ -487,7 +494,7 @@ firefly-iii-sankey \
   -u https://firefly.example.com \
   -t token \
   -p 2024 \
-  --min-amount 100 \
+  --min-amount-transaction 100 \
   -o major-expenses.txt
 ```
 
@@ -550,6 +557,19 @@ firefly-iii-sankey \
   -t token \
   -p 2024 \
   --no-categories --no-budgets
+```
+
+### Example 10: Focus on Major Accounts
+
+Show only accounts with significant activity (total > $500):
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --with-accounts \
+  --min-amount-account 500
 ```
 
 ## Development

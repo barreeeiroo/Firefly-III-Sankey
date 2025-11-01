@@ -14,7 +14,8 @@ export interface SankeyProcessorOptions {
   excludeAccounts?: string[];
   excludeCategories?: string[];
   excludeBudgets?: string[];
-  minAmount?: number;
+  minAmountTransaction?: number;  // Minimum amount for individual transactions
+  minAmountAccount?: number;      // Minimum total amount for accounts/nodes
 }
 
 interface NodeMap {
@@ -59,9 +60,9 @@ export class SankeyProcessor {
           continue;
         }
 
-        // Skip if below minimum amount
+        // Skip if below minimum transaction amount
         const amount = parseFloat(split.amount);
-        if (this.options.minAmount && Math.abs(amount) < this.options.minAmount) {
+        if (this.options.minAmountTransaction && Math.abs(amount) < this.options.minAmountTransaction) {
           continue;
         }
 
@@ -121,9 +122,9 @@ export class SankeyProcessor {
           continue;
         }
 
-        // Skip if below minimum amount
+        // Skip if below minimum transaction amount
         const amount = parseFloat(split.amount);
-        if (this.options.minAmount && Math.abs(amount) < this.options.minAmount) {
+        if (this.options.minAmountTransaction && Math.abs(amount) < this.options.minAmountTransaction) {
           continue;
         }
 
@@ -145,10 +146,18 @@ export class SankeyProcessor {
     }
 
     // Build links from flows
-    const links = this.buildLinks();
+    let links = this.buildLinks();
+    let nodes = this.nodes;
+
+    // Filter accounts by minimum amount if specified
+    if (this.options.minAmountAccount && this.options.withAccounts) {
+      const filtered = this.filterAccountsByAmount(nodes, links, this.options.minAmountAccount);
+      nodes = filtered.nodes;
+      links = filtered.links;
+    }
 
     return {
-      nodes: this.nodes,
+      nodes,
       links,
       metadata: {
         startDate: this.options.startDate,
@@ -345,6 +354,88 @@ export class SankeyProcessor {
     links.sort((a, b) => b.value - a.value);
 
     return links;
+  }
+
+  /**
+   * Filter out revenue and expense accounts below minimum amount
+   */
+  private filterAccountsByAmount(
+    nodes: SankeyNode[],
+    links: SankeyLink[],
+    minAmount: number
+  ): { nodes: SankeyNode[]; links: SankeyLink[] } {
+    // Calculate total flow for each revenue and expense account
+    const accountTotals = new Map<number, number>();
+
+    for (const link of links) {
+      const sourceNode = nodes[link.source];
+      const targetNode = nodes[link.target];
+
+      // Sum flows for revenue accounts (incoming to them)
+      if (sourceNode.type === 'revenue') {
+        accountTotals.set(link.source, (accountTotals.get(link.source) || 0) + link.value);
+      }
+
+      // Sum flows for expense accounts (outgoing from them)
+      if (targetNode.type === 'expense') {
+        accountTotals.set(link.target, (accountTotals.get(link.target) || 0) + link.value);
+      }
+    }
+
+    // Identify accounts to remove
+    const accountsToRemove = new Set<number>();
+    for (const [nodeId, total] of accountTotals.entries()) {
+      if (total < minAmount) {
+        accountsToRemove.add(nodeId);
+      }
+    }
+
+    // Filter out links connected to removed accounts
+    const filteredLinks = links.filter(
+      (link) => {
+        const sourceNode = nodes[link.source];
+        const targetNode = nodes[link.target];
+
+        // Remove link if either end is a filtered revenue/expense account
+        if (sourceNode.type === 'revenue' && accountsToRemove.has(link.source)) {
+          return false;
+        }
+        if (targetNode.type === 'expense' && accountsToRemove.has(link.target)) {
+          return false;
+        }
+
+        return true;
+      }
+    );
+
+    // Get set of node IDs that are still referenced in links
+    const referencedNodes = new Set<number>();
+    for (const link of filteredLinks) {
+      referencedNodes.add(link.source);
+      referencedNodes.add(link.target);
+    }
+
+    // Filter nodes to only those still referenced
+    const filteredNodes = nodes.filter((node) => referencedNodes.has(node.id));
+
+    // Rebuild node IDs to be sequential
+    const nodeIdMap = new Map<number, number>();
+    const remappedNodes = filteredNodes.map((node, index) => {
+      nodeIdMap.set(node.id, index);
+      return { ...node, id: index };
+    });
+
+    // Remap link node references
+    const remappedLinks = filteredLinks.map((link) => ({
+      ...link,
+      source: nodeIdMap.get(link.source)!,
+      target: nodeIdMap.get(link.target)!,
+    }));
+
+    return {
+      nodes: remappedNodes,
+      links: remappedLinks,
+    };
   }
 
   /**

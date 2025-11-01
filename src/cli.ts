@@ -98,7 +98,8 @@ async function generateOutput(
     excludeAccounts?: string[];
     excludeCategories?: string[];
     excludeBudgets?: string[];
-    minAmount?: number;
+    minAmountTransaction?: number;
+    minAmountAccount?: number;
     format?: 'sankeymatic' | 'json' | 'readable';
   }
 ): Promise<string> {
@@ -123,7 +124,8 @@ async function generateOutput(
     excludeAccounts: options.excludeAccounts,
     excludeCategories: options.excludeCategories,
     excludeBudgets: options.excludeBudgets,
-    minAmount: options.minAmount,
+    minAmountTransaction: options.minAmountTransaction,
+    minAmountAccount: options.minAmountAccount,
   });
 
   const sankeyData = processor.processTransactions(transactions);
@@ -199,7 +201,8 @@ function main(): void {
     .option('--exclude-accounts <list>', 'comma-separated list of account names to exclude', parseList)
     .option('--exclude-categories <list>', 'comma-separated list of category names to exclude', parseList)
     .option('--exclude-budgets <list>', 'comma-separated list of budget names to exclude', parseList)
-    .option('--min-amount <amount>', 'minimum transaction amount to include', parseFloat)
+    .option('--min-amount-transaction <amount>', 'minimum transaction amount to include', parseFloat)
+    .option('--min-amount-account <amount>', 'minimum total amount for accounts/nodes to include', parseFloat)
     .addHelpText('after', `
 Environment Variables:
   FIREFLY_BASE_URL    Firefly III base URL (alternative to --base-url)
@@ -237,6 +240,14 @@ Examples:
   # Exclude specific accounts and output as JSON
   $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
       --exclude-accounts "Savings,Investment" -f json -o sankey.json
+
+  # Filter by transaction amount (only transactions > $50)
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
+      --min-amount-transaction 50
+
+  # Show accounts with totals > $100 (requires --with-accounts)
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
+      --with-accounts --min-amount-account 100
 
   # Using environment variables
   $ FIREFLY_BASE_URL=https://firefly.example.com FIREFLY_API_TOKEN=token firefly-iii-sankey -p 2024-Q2
@@ -304,6 +315,16 @@ Examples:
         process.exit(1);
       }
 
+      // Validate minAmountAccount requires withAccounts
+      if (options.minAmountAccount && !options.withAccounts) {
+        console.error('\n❌ Invalid Option Combination');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('The --min-amount-account option requires --with-accounts to be set.');
+        console.error('\nThis filter only applies to individual accounts, which are only');
+        console.error('displayed when using the --with-accounts flag.\n');
+        process.exit(1);
+      }
+
       // Create client and display connection information
       const client = new FireflyClient({ baseUrl, token });
       await displayConnectionInfo(client);
@@ -318,7 +339,8 @@ Examples:
         excludeAccounts: options.excludeAccounts,
         excludeCategories: options.excludeCategories,
         excludeBudgets: options.excludeBudgets,
-        minAmount: options.minAmount,
+        minAmountTransaction: options.minAmountTransaction,
+        minAmountAccount: options.minAmountAccount,
         format: options.format,
       });
 
