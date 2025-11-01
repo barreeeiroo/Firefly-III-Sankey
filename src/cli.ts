@@ -100,6 +100,8 @@ async function generateOutput(
     excludeBudgets?: string[];
     minAmountTransaction?: number;
     minAmountAccount?: number;
+    minAccountGroupingAmount?: number;
+    minCategoryGroupingAmount?: number;
     format?: 'sankeymatic' | 'json' | 'readable';
   }
 ): Promise<string> {
@@ -126,6 +128,8 @@ async function generateOutput(
     excludeBudgets: options.excludeBudgets,
     minAmountTransaction: options.minAmountTransaction,
     minAmountAccount: options.minAmountAccount,
+    minAccountGroupingAmount: options.minAccountGroupingAmount,
+    minCategoryGroupingAmount: options.minCategoryGroupingAmount,
   });
 
   const sankeyData = processor.processTransactions(transactions);
@@ -203,6 +207,8 @@ function main(): void {
     .option('--exclude-budgets <list>', 'comma-separated list of budget names to exclude', parseList)
     .option('--min-amount-transaction <amount>', 'minimum transaction amount to include', parseFloat)
     .option('--min-amount-account <amount>', 'minimum total amount for accounts/nodes to include', parseFloat)
+    .option('--min-account-grouping-amount <amount>', 'group accounts below this amount into [OTHER ACCOUNTS]', parseFloat)
+    .option('--min-category-grouping-amount <amount>', 'group categories below this amount into [OTHER CATEGORIES]', parseFloat)
     .addHelpText('after', `
 Environment Variables:
   FIREFLY_BASE_URL    Firefly III base URL (alternative to --base-url)
@@ -248,6 +254,14 @@ Examples:
   # Show accounts with totals > $100 (requires --with-accounts)
   $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
       --with-accounts --min-amount-account 100
+
+  # Group small categories (< $50) into [OTHER CATEGORIES]
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
+      --min-category-grouping-amount 50
+
+  # Group small accounts (< $100) into [OTHER ACCOUNTS]
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
+      --with-accounts --min-account-grouping-amount 100
 
   # Using environment variables
   $ FIREFLY_BASE_URL=https://firefly.example.com FIREFLY_API_TOKEN=token firefly-iii-sankey -p 2024-Q2
@@ -325,6 +339,16 @@ Examples:
         process.exit(1);
       }
 
+      // Validate minAccountGroupingAmount requires withAccounts
+      if (options.minAccountGroupingAmount && !options.withAccounts) {
+        console.error('\n❌ Invalid Option Combination');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('The --min-account-grouping-amount option requires --with-accounts to be set.');
+        console.error('\nThis grouping only applies to individual accounts, which are only');
+        console.error('displayed when using the --with-accounts flag.\n');
+        process.exit(1);
+      }
+
       // Create client and display connection information
       const client = new FireflyClient({ baseUrl, token });
       await displayConnectionInfo(client);
@@ -341,6 +365,8 @@ Examples:
         excludeBudgets: options.excludeBudgets,
         minAmountTransaction: options.minAmountTransaction,
         minAmountAccount: options.minAmountAccount,
+        minAccountGroupingAmount: options.minAccountGroupingAmount,
+        minCategoryGroupingAmount: options.minCategoryGroupingAmount,
         format: options.format,
       });
 

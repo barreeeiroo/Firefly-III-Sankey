@@ -13,6 +13,7 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 - 🎚️ **Granularity Control**: Choose between aggregated or account-level views; include/exclude categories and budgets
 - 🏷️ **Category & Budget Tracking**: Visualize how money flows through your budgets and categories
 - 🔍 **Flexible Filtering**: Exclude accounts, categories, or budgets; filter by transaction amounts or account totals
+- 📦 **Smart Grouping**: Aggregate small accounts and categories into "[OTHER]" buckets for cleaner visualizations
 - 🎯 **Duplicate Handling**: Automatically handles accounts that appear as both income and expense sources
 - 🚫 **Transfer Exclusion**: Ignores internal transfers between your own accounts
 - 🌈 **Color Coded**: Different node types get distinct colors for easy identification
@@ -249,6 +250,12 @@ firefly-iii-sankey -u https://firefly.example.com -t token \
   --with-accounts \
   --min-amount-transaction 10 \
   --min-amount-account 100
+
+# Group small accounts and categories for cleaner view
+firefly-iii-sankey -u https://firefly.example.com -t token \
+  --with-accounts \
+  --min-account-grouping-amount 50 \
+  --min-category-grouping-amount 25
 ```
 
 ### Output Formats
@@ -338,6 +345,33 @@ This allows you to identify uncategorized or unbudgeted transactions in your vis
 
 You can exclude these nodes entirely using `--no-categories` or `--no-budgets` flags.
 
+### Grouping Small Accounts and Categories
+
+To simplify diagrams with many small accounts or categories, you can group them into aggregated buckets:
+
+**Account Grouping** (`--min-account-grouping-amount`):
+- Accounts with totals below this threshold are grouped into `[OTHER ACCOUNTS] (+)` (revenue) or `[OTHER ACCOUNTS] (-)` (expense)
+- Only works when `--with-accounts` is enabled
+- Example: With threshold of 100, ten accounts with €10 each combine into `[OTHER ACCOUNTS]`
+
+**Category Grouping** (`--min-category-grouping-amount`):
+- Categories with totals below this threshold are grouped into `[OTHER CATEGORIES] (+)` (income) or `[OTHER CATEGORIES] (-)` (expense)
+- Works in both default and `--with-accounts` modes
+- Example: With threshold of 50, small categories like "Coffee" (€5) and "Snacks" (€8) combine into `[OTHER CATEGORIES]`
+
+```bash
+# Group small accounts (< €50) when showing individual accounts
+firefly-iii-sankey -p 2024 --with-accounts --min-account-grouping-amount 50
+
+# Group small categories (< €25)
+firefly-iii-sankey -p 2024 --min-category-grouping-amount 25
+
+# Combine both for maximum clarity
+firefly-iii-sankey -p 2024 --with-accounts \
+  --min-account-grouping-amount 100 \
+  --min-category-grouping-amount 50
+```
+
 ## Options Reference
 
 | Option | Short | Description | Default |
@@ -357,12 +391,15 @@ You can exclude these nodes entirely using `--no-categories` or `--no-budgets` f
 | `--exclude-budgets <list>` | | Comma-separated budget names to exclude | - |
 | `--min-amount-transaction <amount>` | | Minimum transaction amount to include | - |
 | `--min-amount-account <amount>` | | Minimum total for accounts (requires `--with-accounts`) | - |
+| `--min-account-grouping-amount <amount>` | | Group accounts below this into `[OTHER ACCOUNTS]` | - |
+| `--min-category-grouping-amount <amount>` | | Group categories below this into `[OTHER CATEGORIES]` | - |
 | `--version` | `-V` | Show version number | - |
 | `--help` | `-h` | Show help | - |
 
 **Notes:**
 - `--period` cannot be used together with `--start` or `--end`
 - `--min-amount-account` requires `--with-accounts` to be set
+- `--min-account-grouping-amount` requires `--with-accounts` to be set
 
 ## Output Formats
 
@@ -570,6 +607,32 @@ firefly-iii-sankey \
   -p 2024 \
   --with-accounts \
   --min-amount-account 500
+```
+
+### Example 11: Group Small Categories
+
+Simplify the view by grouping categories under €50:
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --min-category-grouping-amount 50
+```
+
+### Example 12: Clean Diagram with Grouping
+
+Show individual accounts but group small ones for clarity:
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --with-accounts \
+  --min-account-grouping-amount 100 \
+  --min-category-grouping-amount 50
 ```
 
 ## Development
