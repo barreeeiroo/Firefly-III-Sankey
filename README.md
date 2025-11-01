@@ -10,12 +10,12 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 
 - 🎨 **Multiple Output Formats**: SankeyMatic (default), JSON, or human-readable text
 - 📊 **Smart Aggregation**: All income flows through "All Funds", then distributes to expenses
-- 🎚️ **Granularity Control**: Choose between aggregated or account-level views; include/exclude categories and budgets
+- 🎚️ **Granularity Control**: Choose between aggregated or account-level views; show asset account flows with transfers; include/exclude categories and budgets
 - 🏷️ **Category & Budget Tracking**: Visualize how money flows through your budgets and categories
 - 🔍 **Flexible Filtering**: Exclude accounts, categories, or budgets; filter by transaction amounts or account totals
 - 📦 **Smart Grouping**: Aggregate small accounts and categories into "[OTHER]" buckets for cleaner visualizations
 - 🎯 **Duplicate Handling**: Automatically handles accounts that appear as both income and expense sources
-- 🚫 **Transfer Exclusion**: Ignores internal transfers between your own accounts
+- 🔄 **Transfer Tracking**: Include transfer flows between asset accounts with `--with-assets` flag
 - 🌈 **Color Coded**: Different node types get distinct colors for easy identification
 - 📅 **Date Range Support**: Analyze any time period with customizable start/end dates or use period shortcuts
 
@@ -194,15 +194,18 @@ Control the level of detail in your Sankey diagram:
 # Show individual revenue/expense accounts as start/end nodes
 firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --with-accounts
 
+# Show individual asset accounts with transfer flows
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --with-assets
+
+# Combine both for maximum detail
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \
+  --with-accounts --with-assets
+
 # Exclude categories for a simpler view
 firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --no-categories
 
 # Exclude budgets for a simpler view
 firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --no-budgets
-
-# Combine for maximum simplification (categories only)
-firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \
-  --no-budgets
 
 # Show individual accounts with categories but no budgets
 firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \
@@ -213,10 +216,21 @@ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \
 - Categories/budgets are the start and end nodes
 - Flow: [Income Categories] → All Funds → [Budgets] → [Expense Categories]
 - Individual revenue/expense accounts are not shown
+- Transfer transactions are excluded
 
 **With `--with-accounts`:**
 - Shows individual revenue accounts (salary, freelance, etc.) and expense accounts (stores, restaurants, etc.)
 - Flow: Revenue Accounts → [Categories] → All Funds → [Budgets] → [Categories] → Expense Accounts
+
+**With `--with-assets`:**
+- Breaks down "All Funds" into individual asset accounts
+- Each asset account appears twice: `Account Name (+)` receives income, `Account Name (-)` pays expenses
+- Transfer transactions flow from `Source (+)` to `Destination (-)`
+- Flow: [Categories] → Asset (+) → Asset (-) → [Budgets] → [Categories]
+
+**With both `--with-accounts` and `--with-assets`:**
+- Maximum detail showing all account types
+- Flow: Revenue Accounts → [Categories] → Asset (+) → Asset (-) → [Budgets] → [Categories] → Expense Accounts
 
 **With `--no-categories` or `--no-budgets`:**
 - Removes intermediate nodes for simplified visualization
@@ -295,6 +309,28 @@ Expense Flow (with --with-accounts):
 All Funds → [Budgets] → [Expense Categories] → Expense Accounts
 ```
 
+With `--with-assets`, "All Funds" is broken down into individual asset accounts:
+
+```
+Income Flow (with --with-assets):
+[Income Categories] → Checking Account (+)
+                   → Savings Account (+)
+
+Transfer Flow:
+Checking Account (+) → Savings Account (-)
+
+Expense Flow (with --with-assets):
+Checking Account (-) → [Budgets] → [Expense Categories]
+Savings Account (-)  → [Budgets] → [Expense Categories]
+```
+
+Each asset account has two nodes:
+- `Account Name (+)` receives income and sends transfers
+- `Account Name (-)` receives transfers and pays expenses
+
+**⚠️ Important Note about `--with-assets`:**
+This option can be confusing due to the way it represents cash flows through asset accounts. Because the diagram shows **cash flows** (money in motion) rather than **account balances** (money at rest), transfers between accounts create "circular" movements that may make total flow values appear inflated. The same money moving between accounts gets counted multiple times in the flow visualization. This is useful for understanding how money moves through your accounts, but the values don't directly represent your actual account balances or total income/expenses. For a clearer view of pure income vs. expenses, use the default mode without `--with-assets`.
+
 Use `--no-categories` or `--no-budgets` to remove intermediate nodes for a simpler view.
 
 ### Key Concepts
@@ -318,7 +354,8 @@ Use `--no-categories` or `--no-budgets` to remove intermediate nodes for a simpl
 - Neither: `All Funds → Expense`
 
 **Transfers:**
-- Asset-to-asset transfers are excluded (they're internal movements, not income/expenses)
+- By default, asset-to-asset transfers are excluded (they're internal movements, not income/expenses)
+- With `--with-assets`, transfers flow from `Source Asset (+)` to `Destination Asset (-)`
 
 ### Duplicate Handling
 
@@ -384,6 +421,7 @@ firefly-iii-sankey -p 2024 --with-accounts \
 | `--output <file>` | `-o` | Write to file instead of console | - |
 | `--format <type>` | `-f` | Output format: sankeymatic, json, readable | readable |
 | `--with-accounts` | | Show individual revenue/expense accounts as start/end nodes | `false` |
+| `--with-assets` | | Break down All Funds into individual asset accounts with transfers | `false` |
 | `--no-categories` | | Exclude category nodes from the diagram | - |
 | `--no-budgets` | | Exclude budget nodes from the diagram | - |
 | `--exclude-accounts <list>` | | Comma-separated account names to exclude | - |
@@ -635,6 +673,31 @@ firefly-iii-sankey \
   --min-category-grouping-amount 50
 ```
 
+### Example 13: Asset Account Flows with Transfers
+
+Show how money flows through your asset accounts including transfers:
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --with-assets
+```
+
+### Example 14: Maximum Detail View
+
+Show all accounts, assets, categories, and budgets:
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --with-accounts \
+  --with-assets
+```
+
 ## Development
 
 ```bash
@@ -679,7 +742,8 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 ## Acknowledgements
 
-Highly inspired by the original but now deprecated [Firefly-III/Sankey](https://github.com/firefly-iii/sankey) written in PHP by JC5.
+Highly inspired by the original but now deprecated [Firefly-III/Sankey](https://github.com/firefly-iii/sankey) written in PHP by
+[JC5](https://github.com/JC5).
 
 This tool was built with the assistance of Generative AI. All final decisions, content, and project direction were made by the repository owner.
 

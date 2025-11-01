@@ -9,6 +9,7 @@ export interface SankeyProcessorOptions {
   startDate: string;
   endDate: string;
   withAccounts?: boolean;         // Show individual revenue/expense accounts as start/end nodes
+  withAssets?: boolean;           // Break down All Funds into individual asset accounts with transfers
   includeCategories?: boolean;    // Include category nodes (default: true)
   includeBudgets?: boolean;       // Include budget nodes (default: true)
   excludeAccounts?: string[];
@@ -130,11 +131,6 @@ export class SankeyProcessor {
           continue;
         }
 
-        // Skip transfers between owned accounts (asset to asset)
-        if (split.type === 'transfer') {
-          continue;
-        }
-
         // Process based on transaction type
         switch (split.type) {
           case 'withdrawal':
@@ -142,6 +138,12 @@ export class SankeyProcessor {
             break;
           case 'deposit':
             this.processDeposit(split);
+            break;
+          case 'transfer':
+            // Only process transfers if withAssets is enabled
+            if (this.options.withAssets) {
+              this.processTransfer(split);
+            }
             break;
         }
       }
@@ -187,11 +189,15 @@ export class SankeyProcessor {
    * Flow depends on options:
    * - Default: All Funds → [Budget] → [Category]
    * - With accounts: All Funds → [Budget] → [Category] → Expense Account
+   * - With assets: Asset (-) → [Budget] → [Category] → (Expense Account)
    */
   private processWithdrawal(split: any) {
     const amount = Math.abs(parseFloat(split.amount));
 
-    const sourceId = this.getOrCreateNode('All Funds', 'asset');
+    // Determine source: specific asset account or "All Funds"
+    const sourceId = this.options.withAssets
+      ? this.getOrCreateNode(`${split.source_name} (-)`, 'asset')
+      : this.getOrCreateNode('All Funds', 'asset');
 
     // Determine flow path based on options
     const hasBudget = this.options.includeBudgets !== false;
@@ -268,10 +274,15 @@ export class SankeyProcessor {
    * Flow depends on options:
    * - Default: [Category] → All Funds
    * - With accounts: Revenue Account → [Category] → All Funds
+   * - With assets: (Revenue Account) → [Category] → Asset (+)
    */
   private processDeposit(split: any) {
     const amount = Math.abs(parseFloat(split.amount));
-    const destId = this.getOrCreateNode('All Funds', 'asset');
+
+    // Determine destination: specific asset account or "All Funds"
+    const destId = this.options.withAssets
+      ? this.getOrCreateNode(`${split.destination_name} (+)`, 'asset')
+      : this.getOrCreateNode('All Funds', 'asset');
 
     // Check if category should be included
     const hasCategory = this.options.includeCategories !== false;
@@ -315,6 +326,24 @@ export class SankeyProcessor {
       const revenueId = this.getOrCreateNode(sourceName, 'revenue');
       this.addFlow(revenueId, destId, amount, split.currency_code);
     }
+  }
+
+  /**
+   * Process transfer transaction (between asset accounts)
+   * Flow: Asset (+) → Asset (-)
+   * Only called when withAssets is enabled
+   */
+  private processTransfer(split: any) {
+    const amount = Math.abs(parseFloat(split.amount));
+
+    // Source asset account (+) sends money
+    const sourceId = this.getOrCreateNode(`${split.source_name} (+)`, 'asset');
+
+    // Destination asset account (-) receives money
+    const destId = this.getOrCreateNode(`${split.destination_name} (-)`, 'asset');
+
+    // Direct flow from source (+) to destination (-)
+    this.addFlow(sourceId, destId, amount, split.currency_code);
   }
 
   /**

@@ -49,6 +49,7 @@ export function formatSankeyMatic(data: SankeyDiagram): string {
   const budgetsToCategories: typeof data.links = [];
   const budgetsToExpenses: typeof data.links = [];
   const categoriesToExpenses: typeof data.links = [];
+  const otherFlows: typeof data.links = [];  // Catch-all for unmatched flows (e.g., asset account flows)
 
   for (const link of data.links) {
     const source = data.nodes.find((n) => n.id === link.source);
@@ -60,24 +61,24 @@ export function formatSankeyMatic(data: SankeyDiagram): string {
     if (source.type === 'revenue' && target.type === 'category') {
       incomeToCategories.push(link);
     }
-    // Income Categories -> All Funds
-    else if (source.type === 'category' && target.name === 'All Funds') {
+    // Income Categories -> All Funds (or Asset+)
+    else if (source.type === 'category' && (target.name === 'All Funds' || target.type === 'asset')) {
       categoriesToAllFunds.push(link);
     }
     // Income Accounts -> All Funds (direct)
     else if (source.type === 'revenue' && target.name === 'All Funds') {
       incomeDirectToAllFunds.push(link);
     }
-    // All Funds -> Budgets
-    else if (source.name === 'All Funds' && target.type === 'budget') {
+    // All Funds (or Asset-) -> Budgets
+    else if ((source.name === 'All Funds' || source.type === 'asset') && target.type === 'budget') {
       allFundsToBudgets.push(link);
     }
-    // All Funds -> Expense Categories
-    else if (source.name === 'All Funds' && target.type === 'category') {
+    // All Funds (or Asset-) -> Expense Categories
+    else if ((source.name === 'All Funds' || source.type === 'asset') && target.type === 'category') {
       allFundsToCategories.push(link);
     }
-    // All Funds -> Expense Accounts (direct)
-    else if (source.name === 'All Funds' && target.type === 'expense') {
+    // All Funds (or Asset-) -> Expense Accounts (direct)
+    else if ((source.name === 'All Funds' || source.type === 'asset') && target.type === 'expense') {
       allFundsToExpenses.push(link);
     }
     // Budgets -> Expense Categories
@@ -91,6 +92,10 @@ export function formatSankeyMatic(data: SankeyDiagram): string {
     // Expense Categories -> Expense Accounts
     else if (source.type === 'category' && target.type === 'expense') {
       categoriesToExpenses.push(link);
+    }
+    // Asset -> Asset transfers and any other unmatched flows
+    else {
+      otherFlows.push(link);
     }
   }
 
@@ -106,7 +111,7 @@ export function formatSankeyMatic(data: SankeyDiagram): string {
   }
 
   if (categoriesToAllFunds.length > 0 || incomeDirectToAllFunds.length > 0) {
-    output += '// Income -> All Funds\n';
+    output += '// Income -> Assets\n';
     for (const link of [...categoriesToAllFunds, ...incomeDirectToAllFunds]) {
       const source = data.nodes.find((n) => n.id === link.source);
       const target = data.nodes.find((n) => n.id === link.target);
@@ -116,7 +121,7 @@ export function formatSankeyMatic(data: SankeyDiagram): string {
   }
 
   if (allFundsToBudgets.length > 0) {
-    output += '// All Funds -> Budgets\n';
+    output += '// Assets -> Budgets\n';
     for (const link of allFundsToBudgets) {
       const source = data.nodes.find((n) => n.id === link.source);
       const target = data.nodes.find((n) => n.id === link.target);
@@ -136,7 +141,7 @@ export function formatSankeyMatic(data: SankeyDiagram): string {
   }
 
   if (allFundsToCategories.length > 0) {
-    output += '// All Funds -> Expense Categories (no budget)\n';
+    output += '// Assets -> Expense Categories (no budget)\n';
     for (const link of allFundsToCategories) {
       const source = data.nodes.find((n) => n.id === link.source);
       const target = data.nodes.find((n) => n.id === link.target);
@@ -166,8 +171,18 @@ export function formatSankeyMatic(data: SankeyDiagram): string {
   }
 
   if (allFundsToExpenses.length > 0) {
-    output += '// All Funds -> Expense Accounts (no budget or category)\n';
+    output += '// Assets -> Expense Accounts (no budget or category)\n';
     for (const link of allFundsToExpenses) {
+      const source = data.nodes.find((n) => n.id === link.source);
+      const target = data.nodes.find((n) => n.id === link.target);
+      output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
+    }
+    output += '\n';
+  }
+
+  if (otherFlows.length > 0) {
+    output += '// Other Flows (Transfers, etc.)\n';
+    for (const link of otherFlows) {
       const source = data.nodes.find((n) => n.id === link.source);
       const target = data.nodes.find((n) => n.id === link.target);
       output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;

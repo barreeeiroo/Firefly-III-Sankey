@@ -74,25 +74,47 @@ The `SankeyProcessor` class transforms Firefly III transactions into Sankey diag
 
 **Key Features:**
 
-1. **Duplicate Account Detection**
-   - First pass identifies accounts appearing as both revenue and expense
-   - Adds `(+)` suffix to revenue accounts and `(-)` to expense accounts
+1. **Duplicate Detection**
+   - First pass identifies accounts and categories appearing as both revenue/income and expense
+   - Adds `(+)` suffix to revenue/income and `(-)` to expense
    - Only applies suffixes when necessary to prevent node conflicts
 
 2. **Transaction Processing**
-   - **Deposits (Income)**: `Revenue Account → [Category] → All Funds`
-   - **Withdrawals (Expenses)**: `All Funds → [Budget] → [Category] → Expense Account`
-   - **Transfers**: Excluded (internal account movements)
+   - **Default Mode**:
+     - Deposits (Income): `[Category] → All Funds`
+     - Withdrawals (Expenses): `All Funds → [Budget] → [Category]`
+     - Transfers: Excluded (internal movements)
 
-3. **Flow Aggregation**
+   - **With `--with-accounts`**:
+     - Deposits: `Revenue Account → [Category] → All Funds`
+     - Withdrawals: `All Funds → [Budget] → [Category] → Expense Account`
+
+   - **With `--with-assets`**:
+     - Deposits: `[Category] → Asset Account (+)`
+     - Withdrawals: `Asset Account (-) → [Budget] → [Category]`
+     - Transfers: `Source Asset (+) → Destination Asset (-)`
+     - Each asset appears twice with (+) and (-) suffixes
+
+3. **Missing Data Handling**
+   - Transactions without categories use `[NO CATEGORY] (+)` or `[NO CATEGORY] (-)`
+   - Expenses without budgets use `[NO BUDGET]`
+   - Ensures all transactions are included in visualization
+
+4. **Flow Aggregation**
    - Combines multiple transactions between same nodes
    - Accumulates amounts by currency
    - Maintains node uniqueness via type-prefixed keys
 
-4. **Filtering**
+5. **Filtering**
    - Exclude specific accounts, categories, or budgets
-   - Minimum transaction amount threshold
+   - Minimum transaction amount threshold (`--min-amount-transaction`)
+   - Minimum account total threshold (`--min-amount-account`)
    - Respects user-defined exclusions
+
+6. **Smart Grouping**
+   - Group small accounts below threshold into `[OTHER ACCOUNTS] (+)` or `[OTHER ACCOUNTS] (-)`
+   - Group small categories below threshold into `[OTHER CATEGORIES] (+)` or `[OTHER CATEGORIES] (-)`
+   - Simplifies diagrams with many small flows
 
 **Implementation Details:**
 
@@ -103,9 +125,26 @@ const key = `${type}:${name}`;  // e.g., "revenue:Salary" vs "expense:Salary"
 // Flows stored with source→target:currency format
 const flowKey = `${sourceId}->${targetId}:${currency}`;
 
-// All Funds acts as central aggregation node
+// All Funds acts as central aggregation node (default mode)
 const allFundsId = this.getOrCreateNode('All Funds', 'asset');
+
+// With --with-assets, asset accounts are duplicated
+const assetInId = this.getOrCreateNode(`${accountName} (+)`, 'asset');  // Receives income
+const assetOutId = this.getOrCreateNode(`${accountName} (-)`, 'asset'); // Pays expenses
+
+// Default category/budget names for missing data
+const categoryName = split.category_name || '[NO CATEGORY]';
+const budgetName = split.budget_name || '[NO BUDGET]';
 ```
+
+**Processing Pipeline:**
+
+1. **Identify Duplicates** - First pass to find accounts/categories appearing in both income and expenses
+2. **Process Transactions** - Transform each transaction into flows between nodes
+3. **Build Links** - Convert flow accumulations into Sankey links
+4. **Group Small Nodes** - Aggregate accounts/categories below thresholds (if enabled)
+5. **Filter Accounts** - Remove accounts below minimum total (if enabled)
+6. **Return Diagram** - Final nodes and links with metadata
 
 #### Formatters (`formatters/`)
 
@@ -144,12 +183,20 @@ Command-line interface implementation using Commander.js.
 
 **Features:**
 - Credential management (flags or environment variables)
-- Date range selection with sensible defaults
-- Filtering options (accounts, categories, budgets, minimum amount)
-- Output format selection
+- Date range selection with sensible defaults and period shortcuts (YYYY, YYYY-MM, YYYY-QX, YYYY-MM-DD)
+- Granularity control (`--with-accounts`, `--with-assets`)
+- Category/budget toggling (`--no-categories`, `--no-budgets`)
+- Filtering options:
+  - Exclude lists (accounts, categories, budgets)
+  - Minimum transaction amount (`--min-amount-transaction`)
+  - Minimum account total (`--min-amount-account`)
+  - Account grouping (`--min-account-grouping-amount`)
+  - Category grouping (`--min-category-grouping-amount`)
+- Output format selection (SankeyMatic, JSON, readable)
 - File output support
 - Comprehensive help text with examples
 - Error handling with user-friendly messages
+- Validation of option combinations
 
 ## Data Flow
 
@@ -174,10 +221,10 @@ Console or File
 ### 1. Two-Pass Processing
 
 The processor makes two passes over transactions:
-- **Pass 1**: Identify duplicate account names
+- **Pass 1**: Identify duplicate account and category names
 - **Pass 2**: Process and transform data
 
-This ensures correct suffix application without requiring complex lookahead logic.
+This ensures correct suffix application without requiring complex lookahead logic. Duplicates are tracked separately for accounts and categories.
 
 ### 2. Type-Based Node Keys
 
@@ -186,12 +233,13 @@ Nodes are keyed by `type:name` to allow same name across different types:
 - Prevents incorrect flow merging
 - Enables proper node separation in visualization
 
-### 3. Central "All Funds" Node
+### 3. Central "All Funds" Node (Default Mode)
 
-All money flows through a central aggregation point:
+By default, all money flows through a central aggregation point:
 - **Benefits**: Clear visualization of total income vs total expenses
 - **Trade-off**: Loses visibility of which specific account held the money
 - **Rationale**: Focus on financial flows rather than account balances
+- **Alternative**: Use `--with-assets` to break down into individual asset accounts
 
 ### 4. Module-Based Architecture
 
@@ -201,12 +249,23 @@ Each major component is self-contained:
 - Formatters are independent and extensible
 - **Benefits**: Easy testing, clear responsibilities, simple extension
 
-### 5. Transfer Exclusion
+### 5. Transfer Handling
 
-Asset-to-asset transfers are excluded:
+Asset-to-asset transfers are handled differently based on mode:
+
+**Default Mode (transfers excluded):**
+- Transfers are skipped during processing
 - **Rationale**: These are internal movements, not income or expenses
 - **Result**: Cleaner diagram focused on financial inflows/outflows
-- **Note**: Users who want transfers can modify `processTransactions()`
+
+**With `--with-assets` (transfers included):**
+- Each asset account appears twice: `Account (+)` and `Account (-)`
+- Transfers flow from `Source (+)` → `Destination (-)`
+- **Rationale**: Shows how money moves between accounts
+- **Result**: Complete picture of asset account flows including internal transfers
+- **Caveat**: This mode represents cash flows (money in motion) rather than account balances (money at rest). Transfers between accounts create "circular" movements that can inflate total flow values, as the same money gets counted multiple times. The diagram is useful for understanding how money moves through accounts but doesn't directly represent actual balances or total income/expenses.
+
+This design allows users to choose the level of detail they need.
 
 ## Adding New Features
 

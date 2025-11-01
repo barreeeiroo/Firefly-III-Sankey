@@ -93,6 +93,7 @@ async function generateOutput(
     start: string;
     end: string;
     withAccounts?: boolean;
+    withAssets?: boolean;
     includeCategories?: boolean;
     includeBudgets?: boolean;
     excludeAccounts?: string[];
@@ -121,6 +122,7 @@ async function generateOutput(
     startDate: options.start,
     endDate: options.end,
     withAccounts: options.withAccounts,
+    withAssets: options.withAssets,
     includeCategories: options.includeCategories,
     includeBudgets: options.includeBudgets,
     excludeAccounts: options.excludeAccounts,
@@ -200,6 +202,7 @@ function main(): void {
     .option('-o, --output <filename>', 'write output to file instead of console')
     .option('-f, --format <type>', 'output format: sankeymatic, json, or readable [default: readable]', 'readable')
     .option('--with-accounts', 'show individual revenue/expense accounts in the diagram')
+    .option('--with-assets', 'break down All Funds into individual asset accounts with transfers')
     .option('--no-categories', 'exclude category nodes from the diagram')
     .option('--no-budgets', 'exclude budget nodes from the diagram')
     .option('--exclude-accounts <list>', 'comma-separated list of account names to exclude', parseList)
@@ -236,6 +239,9 @@ Examples:
 
   # Show individual revenue/expense accounts
   $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --with-accounts
+
+  # Show asset accounts with transfer flows
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --with-assets
 
   # Exclude budgets for category-only view
   $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --no-budgets
@@ -358,6 +364,7 @@ Examples:
         start,
         end,
         withAccounts: options.withAccounts,
+        withAssets: options.withAssets,
         includeCategories: options.categories,
         includeBudgets: options.budgets,
         excludeAccounts: options.excludeAccounts,
