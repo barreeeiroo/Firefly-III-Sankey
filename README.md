@@ -39,10 +39,6 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 - A running Firefly III instance with **API version 6.3.0 or higher (below 7.0.0)**
 - API token from your Firefly III account
 
-> **Note:** The tool validates API compatibility at startup. If your Firefly III instance uses an unsupported API version, you can:
-> - Bypass the check with `--disable-api-version-check` (functionality may be limited or broken)
-> - [Request support for your API version](https://github.com/barreeeiroo/Firefly-III-Sankey/issues) by opening a GitHub issue
-
 ### Quick Try with npx (No Installation Required!)
 
 Run immediately without installing:
