@@ -2,6 +2,8 @@
 
 A powerful command-line tool that generates Sankey diagrams from your [Firefly III](https://www.firefly-iii.org/) financial data. Visualize your money flows with ease - see where your income comes from and where your expenses go, all in a beautiful, interactive diagram.
 
+🖼️ **[View example visualizations](#example-visualizations)**
+
 ![SankeyMatic Compatible](https://img.shields.io/badge/SankeyMatic-Compatible-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -101,6 +103,8 @@ npm link  # Optional: for global CLI access
 > difference** for the date range (total income minus total expenses).
 
 ## Example Visualizations
+
+The following examples use data from the [Firefly III demo site](https://demo.firefly-iii.org/).
 
 **Default behavior** - Shows aggregated flows through budgets and categories:
 
