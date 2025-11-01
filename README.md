@@ -104,13 +104,22 @@ npm link  # Optional: for global CLI access
 # Current month (default)
 npx firefly-iii-sankey -u https://firefly.example.com -t your-token
 
-# Specific date range
+# Full year
+npx firefly-iii-sankey -u https://firefly.example.com -t token -p 2024
+
+# Specific month
+npx firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-01
+
+# Quarter
+npx firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-Q1
+
+# Custom date range
 npx firefly-iii-sankey -u https://firefly.example.com -t token \
-  -s 2024-01-01 -e 2024-12-31
+  -s 2024-01-01 -e 2024-01-15
 
 # Save to file
 npx firefly-iii-sankey -u https://firefly.example.com -t token \
-  -o my-sankey-diagram.txt
+  -p 2024 -o my-sankey-diagram.txt
 ```
 
 **With global installation:**
@@ -119,16 +128,48 @@ npx firefly-iii-sankey -u https://firefly.example.com -t token \
 # Current month (default)
 firefly-iii-sankey -u https://firefly.example.com -t your-token
 
-# Specific date range
-firefly-iii-sankey -u https://firefly.example.com -t token \
-  -s 2024-01-01 -e 2024-12-31
+# Full year
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024
 
-# Save to file
+# Specific month
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-01
+
+# Quarter
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-Q1
+
+# Custom date range
 firefly-iii-sankey -u https://firefly.example.com -t token \
-  -o my-sankey-diagram.txt
+  -s 2024-01-01 -e 2024-01-15
 ```
 
 > 💡 **Tip**: Use `npx` for one-time runs or trying the tool. Install globally if you use it regularly.
+
+### Period Shortcuts
+
+The `--period` (or `-p`) option provides convenient shortcuts for common date ranges:
+
+| Format | Example | Description |
+|--------|---------|-------------|
+| `YYYY` | `2024` | Full year (Jan 1 - Dec 31) |
+| `YYYY-MM` | `2024-01` | Specific month (all days) |
+| `YYYY-QX` | `2024-Q1` | Quarter (Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec) |
+| `YYYY-MM-DD` | `2024-01-15` | Single specific day |
+
+**Examples:**
+
+```bash
+# Full year 2024
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024
+
+# January 2024
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-01
+
+# First quarter of 2024
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-Q1
+
+# Single day
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-01-15
+```
 
 ### Environment Variables
 
@@ -139,8 +180,8 @@ export FIREFLY_BASE_URL=https://firefly.example.com
 export FIREFLY_API_TOKEN=your-token
 
 # Works with both npx and installed versions
-npx firefly-iii-sankey  # Uses environment variables
-firefly-iii-sankey      # If installed globally
+npx firefly-iii-sankey -p 2024  # Uses environment variables
+firefly-iii-sankey -p 2024      # If installed globally
 ```
 
 ### Filtering
@@ -233,6 +274,7 @@ This prevents the diagram from incorrectly merging these flows.
 |--------|-------|-------------|---------|
 | `--base-url <url>` | `-u` | Firefly III base URL | - |
 | `--api-token <token>` | `-t` | API bearer token | - |
+| `--period <period>` | `-p` | Period: YYYY, YYYY-MM, YYYY-QX, or YYYY-MM-DD | - |
 | `--start <date>` | `-s` | Start date (YYYY-MM-DD) | First day of current month |
 | `--end <date>` | `-e` | End date (YYYY-MM-DD) | Last day of current month |
 | `--output <file>` | `-o` | Write to file instead of console | - |
@@ -243,6 +285,8 @@ This prevents the diagram from incorrectly merging these flows.
 | `--min-amount <amount>` | | Minimum transaction amount to include | - |
 | `--version` | `-V` | Show version number | - |
 | `--help` | `-h` | Show help | - |
+
+> **Note**: `--period` cannot be used together with `--start` or `--end`.
 
 ## Output Formats
 
@@ -337,55 +381,68 @@ Visualize your entire year's finances:
 firefly-iii-sankey \
   -u https://firefly.example.com \
   -t token \
-  -s 2024-01-01 \
-  -e 2024-12-31 \
+  -p 2024 \
   -o 2024-financial-year.txt
 ```
 
-### Example 2: Monthly Budget Review
+### Example 2: Quarterly Review
 
-See where your budgeted money went:
+Analyze first quarter spending:
 
 ```bash
 firefly-iii-sankey \
   -u https://firefly.example.com \
   -t token \
-  -s 2024-11-01 \
-  -e 2024-11-30 \
+  -p 2024-Q1 \
   --format readable
 ```
 
-### Example 3: Significant Expenses Only
+### Example 3: Monthly Budget Review
 
-Focus on major transactions:
+See where your budgeted money went in November:
 
 ```bash
 firefly-iii-sankey \
   -u https://firefly.example.com \
   -t token \
+  -p 2024-11 \
+  --format readable
+```
+
+### Example 4: Significant Expenses Only
+
+Focus on major transactions for the year:
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
   --min-amount 100 \
   -o major-expenses.txt
 ```
 
-### Example 4: Clean View Without Transfers
+### Example 5: Clean View Without Transfers
 
-Exclude savings and investment transfers:
+Exclude savings and investment transfers for Q4:
 
 ```bash
 firefly-iii-sankey \
   -u https://firefly.example.com \
   -t token \
+  -p 2024-Q4 \
   --exclude-accounts "Savings Account,Investment Account,Emergency Fund"
 ```
 
-### Example 5: Export as JSON for Analysis
+### Example 6: Export as JSON for Analysis
 
-Get structured data for custom analysis:
+Get structured data for the entire year:
 
 ```bash
 firefly-iii-sankey \
   -u https://firefly.example.com \
   -t token \
+  -p 2024 \
   -f json \
   -o finances.json
 ```

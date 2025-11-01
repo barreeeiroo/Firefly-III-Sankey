@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FireflyClient } from './client';
 import { SankeyProcessor, formatJson, formatSankeyMatic, formatReadable } from './sankey';
+import { parsePeriod } from './utils/period-parser';
 import packageJson from '../package.json';
 
 const program = new Command();
@@ -181,6 +182,7 @@ function main(): void {
     .version(packageJson.version)
     .option('-u, --base-url <url>', 'Firefly III base URL (e.g., https://firefly.example.com)')
     .option('-t, --api-token <token>', 'Firefly III API bearer token')
+    .option('-p, --period <period>', 'period: YYYY (year), YYYY-MM (month), YYYY-QX (quarter), or YYYY-MM-DD (day)')
     .option('-s, --start <date>', `start date (YYYY-MM-DD) [default: ${defaultDates.start}]`)
     .option('-e, --end <date>', `end date (YYYY-MM-DD) [default: ${defaultDates.end}]`)
     .option('-o, --output <filename>', 'write output to file instead of console')
@@ -198,20 +200,28 @@ Examples:
   # Generate SankeyMatic diagram for current month
   $ firefly-iii-sankey -u https://firefly.example.com -t your-token-here
 
-  # Generate diagram for specific date range and save to file
+  # Full year 2024
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024
+
+  # Specific month (January 2024)
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-01
+
+  # Quarter (Q1 2024)
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-Q1
+
+  # Specific day
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024-01-15
+
+  # Custom date range (overrides period)
   $ firefly-iii-sankey -u https://firefly.example.com -t token \\
       -s 2024-01-01 -e 2024-01-31 -o sankey.txt
 
   # Exclude specific accounts and output as JSON
-  $ firefly-iii-sankey -u https://firefly.example.com -t token \\
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
       --exclude-accounts "Savings,Investment" -f json -o sankey.json
 
-  # Human-readable format with minimum amount filter
-  $ firefly-iii-sankey -u https://firefly.example.com -t token \\
-      --format readable --min-amount 10
-
   # Using environment variables
-  $ FIREFLY_BASE_URL=https://firefly.example.com FIREFLY_API_TOKEN=token firefly-iii-sankey
+  $ FIREFLY_BASE_URL=https://firefly.example.com FIREFLY_API_TOKEN=token firefly-iii-sankey -p 2024-Q2
     `)
     .action(async (options) => {
       // Get credentials from options or environment variables
@@ -230,9 +240,43 @@ Examples:
         process.exit(1);
       }
 
-      // Get date range
-      const start = options.start || defaultDates.start;
-      const end = options.end || defaultDates.end;
+      // Determine date range
+      let start: string;
+      let end: string;
+
+      // Check for conflicting options
+      if (options.period && (options.start || options.end)) {
+        console.error('\n❌ Conflicting Options');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('Cannot use --period together with --start or --end.');
+        console.error('\nUse either:');
+        console.error('  • --period for preset ranges (e.g., -p 2024, -p 2024-Q1)');
+        console.error('  • --start and --end for custom ranges (e.g., -s 2024-01-01 -e 2024-01-31)\n');
+        process.exit(1);
+      }
+
+      if (options.period) {
+        // Parse period
+        try {
+          const periodRange = parsePeriod(options.period);
+          start = periodRange.start;
+          end = periodRange.end;
+        } catch (error) {
+          console.error('\n❌ Invalid Period Format');
+          console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.error(error instanceof Error ? error.message : 'Unknown error');
+          console.error('\nSupported formats:');
+          console.error('  • YYYY         (full year, e.g., 2024)');
+          console.error('  • YYYY-MM      (specific month, e.g., 2024-01)');
+          console.error('  • YYYY-QX      (quarter, e.g., 2024-Q1)');
+          console.error('  • YYYY-MM-DD   (specific day, e.g., 2024-01-15)\n');
+          process.exit(1);
+        }
+      } else {
+        // Use explicit dates or defaults
+        start = options.start || defaultDates.start;
+        end = options.end || defaultDates.end;
+      }
 
       // Validate dates
       if (new Date(start) > new Date(end)) {
