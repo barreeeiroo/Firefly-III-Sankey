@@ -319,7 +319,64 @@ console.log(formatSankeyMatic(sample));
 
 This section is for maintainers who have publish rights.
 
-### Prerequisites
+### Automated Publishing (Recommended)
+
+The project uses GitHub Actions to automatically publish to npm when a new version tag is pushed.
+
+#### Setup (One-Time)
+
+1. **Create npm Access Token:**
+   - Go to https://www.npmjs.com/settings/YOUR_USERNAME/tokens
+   - Click "Generate New Token" → "Classic Token"
+   - Select "Automation" type (for CI/CD)
+   - Copy the token (you'll only see it once!)
+
+2. **Add Token to GitHub Secrets:**
+   - Go to your GitHub repository → Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `NPM_TOKEN`
+   - Value: Paste your npm token
+   - Click "Add secret"
+
+#### Publishing a New Version
+
+1. **Update version and create tag:**
+   ```bash
+   # Ensure you're on main branch with latest changes
+   git checkout main
+   git pull origin main
+
+   # Update version (this creates a git tag automatically)
+   npm version patch  # or minor, or major
+
+   # Push commits and tags
+   git push origin main --follow-tags
+   ```
+
+2. **GitHub Actions will automatically:**
+   - Build the project
+   - Run tests (when implemented)
+   - Publish to npm with provenance
+   - Create a GitHub release
+
+3. **Monitor the workflow:**
+   - Go to GitHub → Actions tab
+   - Watch the "Publish to npm" workflow
+   - Verify it completes successfully
+
+#### What the Workflow Does
+
+- ✅ Builds the TypeScript project
+- ✅ Verifies package contents
+- ✅ Publishes to npm with provenance (authenticity verification)
+- ✅ Creates a GitHub release with installation instructions
+- ✅ Links to the npm package page
+
+### Manual Publishing (Alternative)
+
+If you need to publish manually:
+
+#### Prerequisites
 
 1. **npm Account**: Ensure you have an npm account with publish permissions
 2. **Authentication**: Login to npm via CLI:
@@ -478,6 +535,32 @@ The package is configured for npm in `package.json`:
 - Development files (`.env`, IDE configs, etc.)
 
 ### Troubleshooting Publishing
+
+#### GitHub Actions Issues
+
+**"Error: Unable to authenticate"**
+- Verify `NPM_TOKEN` secret is set in GitHub repository settings
+- Ensure the token is an "Automation" token, not "Publish" or "Read-only"
+- Check token hasn't expired (tokens can expire after 1 year)
+- Regenerate token on npm and update GitHub secret
+
+**"Workflow not triggering"**
+- Ensure you pushed tags: `git push origin main --follow-tags`
+- Verify tag follows pattern `v*.*.*` (e.g., `v1.0.0`)
+- Check GitHub Actions are enabled for the repository
+
+**"Build failed in workflow"**
+- Check the Actions tab for detailed error logs
+- Ensure all files are committed to git
+- Try building locally: `npm run build`
+- Check `package-lock.json` is committed
+
+**"Publish failed: Package already published"**
+- Each version can only be published once
+- Increment version: `npm version patch`
+- Push new tag: `git push --follow-tags`
+
+#### Manual Publishing Issues
 
 **"You do not have permission to publish"**
 - Ensure you're logged in: `npm whoami`

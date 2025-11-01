@@ -1,0 +1,66 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Verify package contents
+        run: npm pack --dry-run
+
+      - name: Publish to npm
+        run: npm publish
+
+      - name: Get package version
+        id: package_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## Firefly III Sankey ${{ steps.package_version.outputs.version }}
+
+            Published to npm: https://www.npmjs.com/package/firefly-iii-sankey/v/${{ steps.package_version.outputs.version }}
+
+            ### Installation
+            ```bash
+            npm install -g firefly-iii-sankey@${{ steps.package_version.outputs.version }}
+            ```
+
+            Or use with npx:
+            ```bash
+            npx firefly-iii-sankey@${{ steps.package_version.outputs.version }}
+            ```
+
+            See the [README](https://github.com/${{ github.repository }}) for usage instructions.
+          draft: false
+          prerelease: false
