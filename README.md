@@ -290,8 +290,8 @@ Use `--no-categories` or `--no-budgets` to remove intermediate nodes for a simpl
 
 1. **Revenue Accounts**: Where your money comes from (salary, freelance, investments)
 2. **All Funds**: Central aggregation point - represents all available money
-3. **Budgets**: How you allocate your funds (optional)
-4. **Categories**: Classification of income/expenses (optional)
+3. **Budgets**: How you allocate your funds (transactions without budgets use `[NO BUDGET]`)
+4. **Categories**: Classification of income/expenses (transactions without categories use `[NO CATEGORY]`)
 5. **Expense Accounts**: Where your money goes (stores, utilities, restaurants)
 
 ### Transaction Processing
@@ -309,13 +309,30 @@ Use `--no-categories` or `--no-budgets` to remove intermediate nodes for a simpl
 **Transfers:**
 - Asset-to-asset transfers are excluded (they're internal movements, not income/expenses)
 
-### Duplicate Account Handling
+### Duplicate Handling
 
-If an account appears as both a revenue source and expense destination (e.g., "Cash"), the tool automatically:
-- Adds `(+)` suffix to the revenue instance
-- Adds `(-)` suffix to the expense instance
+If an account or category appears as both revenue/income and expense, the tool automatically adds suffixes to distinguish them:
 
-This prevents the diagram from incorrectly merging these flows.
+**Accounts:**
+- Revenue account: `Account Name (+)`
+- Expense account: `Account Name (-)`
+
+**Categories:**
+- Income category: `Category Name (+)`
+- Expense category: `Category Name (-)`
+
+This prevents the diagram from incorrectly merging flows that should be separate.
+
+### Missing Categories and Budgets
+
+Transactions without categories or budgets are automatically grouped:
+
+- **Transactions without a category**: Labeled as `[NO CATEGORY]`
+- **Expenses without a budget**: Labeled as `[NO BUDGET]`
+
+This allows you to identify uncategorized or unbudgeted transactions in your visualization.
+
+You can exclude these nodes entirely using `--no-categories` or `--no-budgets` flags.
 
 ## Options Reference
 

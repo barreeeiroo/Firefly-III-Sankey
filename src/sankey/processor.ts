@@ -37,17 +37,20 @@ export class SankeyProcessor {
   private flows: FlowMap = {};
   private options: SankeyProcessorOptions;
   private duplicateAccountNames: Set<string> = new Set();
+  private duplicateCategoryNames: Set<string> = new Set();
 
   constructor(options: SankeyProcessorOptions) {
     this.options = options;
   }
 
   /**
-   * Identify account names that appear as both revenue and expense
+   * Identify account and category names that appear as both revenue and expense
    */
   private identifyDuplicateAccounts(transactions: Transaction[]): void {
     const revenueAccounts = new Set<string>();
     const expenseAccounts = new Set<string>();
+    const revenueCategories = new Set<string>();
+    const expenseCategories = new Set<string>();
 
     for (const transaction of transactions) {
       for (const split of transaction.attributes.transactions) {
@@ -70,8 +73,14 @@ export class SankeyProcessor {
         // Track revenue and expense account names
         if (split.type === 'deposit') {
           revenueAccounts.add(split.source_name);
+          if (split.category_name) {
+            revenueCategories.add(split.category_name);
+          }
         } else if (split.type === 'withdrawal') {
           expenseAccounts.add(split.destination_name);
+          if (split.category_name) {
+            expenseCategories.add(split.category_name);
+          }
         }
       }
     }
@@ -81,6 +90,14 @@ export class SankeyProcessor {
     for (const name of revenueAccounts) {
       if (expenseAccounts.has(name)) {
         this.duplicateAccountNames.add(name);
+      }
+    }
+
+    // Find categories that appear in both sets
+    this.duplicateCategoryNames.clear();
+    for (const name of revenueCategories) {
+      if (expenseCategories.has(name)) {
+        this.duplicateCategoryNames.add(name);
       }
     }
   }
@@ -153,10 +170,25 @@ export class SankeyProcessor {
 
     const sourceId = this.getOrCreateNode('All Funds', 'asset');
 
-    // Determine flow path based on available data and options
-    const hasBudget = split.budget_name && this.options.includeBudgets !== false;
-    const hasCategory = split.category_name && this.options.includeCategories !== false;
+    // Determine flow path based on options
+    const hasBudget = this.options.includeBudgets !== false;
+    const hasCategory = this.options.includeCategories !== false;
     const showExpenseAccount = this.options.withAccounts;
+
+    // Get category name with suffix if duplicate, or use default
+    const getCategoryName = () => {
+      const categoryName = split.category_name || '[NO CATEGORY]';
+      // Always add (-) suffix for expenses if duplicate OR if it's [NO CATEGORY]
+      if (this.duplicateCategoryNames.has(categoryName) || categoryName === '[NO CATEGORY]') {
+        return `${categoryName} (-)`;
+      }
+      return categoryName;
+    };
+
+    // Get budget name or use default
+    const getBudgetName = () => {
+      return split.budget_name || '[NO BUDGET]';
+    };
 
     // Determine the final destination
     let finalDestId: number;
@@ -168,10 +200,10 @@ export class SankeyProcessor {
       finalDestId = this.getOrCreateNode(destName, 'expense');
     } else if (hasCategory) {
       // End at category
-      finalDestId = this.getOrCreateNode(split.category_name, 'category');
+      finalDestId = this.getOrCreateNode(getCategoryName(), 'category');
     } else if (hasBudget) {
       // End at budget
-      finalDestId = this.getOrCreateNode(split.budget_name, 'budget');
+      finalDestId = this.getOrCreateNode(getBudgetName(), 'budget');
     } else {
       // No category or budget, must show account
       const destName = this.duplicateAccountNames.has(split.destination_name)
@@ -182,24 +214,24 @@ export class SankeyProcessor {
 
     if (hasBudget && hasCategory && showExpenseAccount) {
       // Source → Budget → Category → Expense Account
-      const budgetId = this.getOrCreateNode(split.budget_name, 'budget');
-      const categoryId = this.getOrCreateNode(split.category_name, 'category');
+      const budgetId = this.getOrCreateNode(getBudgetName(), 'budget');
+      const categoryId = this.getOrCreateNode(getCategoryName(), 'category');
       this.addFlow(sourceId, budgetId, amount, split.currency_code);
       this.addFlow(budgetId, categoryId, amount, split.currency_code);
       this.addFlow(categoryId, finalDestId, amount, split.currency_code);
     } else if (hasBudget && hasCategory) {
       // Source → Budget → Category (end at category)
-      const budgetId = this.getOrCreateNode(split.budget_name, 'budget');
+      const budgetId = this.getOrCreateNode(getBudgetName(), 'budget');
       this.addFlow(sourceId, budgetId, amount, split.currency_code);
       this.addFlow(budgetId, finalDestId, amount, split.currency_code);
     } else if (hasBudget && showExpenseAccount) {
       // Source → Budget → Expense Account
-      const budgetId = this.getOrCreateNode(split.budget_name, 'budget');
+      const budgetId = this.getOrCreateNode(getBudgetName(), 'budget');
       this.addFlow(sourceId, budgetId, amount, split.currency_code);
       this.addFlow(budgetId, finalDestId, amount, split.currency_code);
     } else if (hasCategory && showExpenseAccount) {
       // Source → Category → Expense Account
-      const categoryId = this.getOrCreateNode(split.category_name, 'category');
+      const categoryId = this.getOrCreateNode(getCategoryName(), 'category');
       this.addFlow(sourceId, categoryId, amount, split.currency_code);
       this.addFlow(categoryId, finalDestId, amount, split.currency_code);
     } else {
@@ -219,36 +251,46 @@ export class SankeyProcessor {
     const destId = this.getOrCreateNode('All Funds', 'asset');
 
     // Check if category should be included
-    const hasCategory = split.category_name && this.options.includeCategories !== false;
+    const hasCategory = this.options.includeCategories !== false;
     const showRevenueAccount = this.options.withAccounts;
 
-    // Determine the starting point
-    let startNodeId: number;
-    if (showRevenueAccount) {
-      // Only add (+) suffix if this account name appears as both revenue and expense
-      const sourceName = this.duplicateAccountNames.has(split.source_name)
-        ? `${split.source_name} (+)`
-        : split.source_name;
-      startNodeId = this.getOrCreateNode(sourceName, 'revenue');
-    } else if (hasCategory) {
-      // Start at category
-      startNodeId = this.getOrCreateNode(split.category_name, 'category');
-    } else {
-      // No category, must show account
-      const sourceName = this.duplicateAccountNames.has(split.source_name)
-        ? `${split.source_name} (+)`
-        : split.source_name;
-      startNodeId = this.getOrCreateNode(sourceName, 'revenue');
-    }
+    // Get category name with suffix if duplicate, or use default
+    const getCategoryName = () => {
+      const categoryName = split.category_name || '[NO CATEGORY]';
+      // Always add (+) suffix for income if duplicate OR if it's [NO CATEGORY]
+      if (this.duplicateCategoryNames.has(categoryName) || categoryName === '[NO CATEGORY]') {
+        return `${categoryName} (+)`;
+      }
+      return categoryName;
+    };
 
-    if (hasCategory && showRevenueAccount) {
+    if (showRevenueAccount && hasCategory) {
       // Revenue Account → Category → All Funds
-      const categoryId = this.getOrCreateNode(split.category_name, 'category');
-      this.addFlow(startNodeId, categoryId, amount, split.currency_code);
+      const sourceName = this.duplicateAccountNames.has(split.source_name)
+        ? `${split.source_name} (+)`
+        : split.source_name;
+      const revenueId = this.getOrCreateNode(sourceName, 'revenue');
+      const categoryId = this.getOrCreateNode(getCategoryName(), 'category');
+      this.addFlow(revenueId, categoryId, amount, split.currency_code);
+      this.addFlow(categoryId, destId, amount, split.currency_code);
+    } else if (showRevenueAccount) {
+      // Revenue Account → All Funds (no category)
+      const sourceName = this.duplicateAccountNames.has(split.source_name)
+        ? `${split.source_name} (+)`
+        : split.source_name;
+      const revenueId = this.getOrCreateNode(sourceName, 'revenue');
+      this.addFlow(revenueId, destId, amount, split.currency_code);
+    } else if (hasCategory) {
+      // Category → All Funds (no account shown)
+      const categoryId = this.getOrCreateNode(getCategoryName(), 'category');
       this.addFlow(categoryId, destId, amount, split.currency_code);
     } else {
-      // Direct flow to All Funds
-      this.addFlow(startNodeId, destId, amount, split.currency_code);
+      // Direct flow: must show account when no category
+      const sourceName = this.duplicateAccountNames.has(split.source_name)
+        ? `${split.source_name} (+)`
+        : split.source_name;
+      const revenueId = this.getOrCreateNode(sourceName, 'revenue');
+      this.addFlow(revenueId, destId, amount, split.currency_code);
     }
   }
 
