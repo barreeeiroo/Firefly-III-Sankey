@@ -10,12 +10,13 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 
 - 🎨 **Multiple Output Formats**: SankeyMatic (default), JSON, or human-readable text
 - 📊 **Smart Aggregation**: All income flows through "All Funds", then distributes to expenses
+- 🎚️ **Granularity Control**: Choose between aggregated or account-level views; include/exclude categories and budgets
 - 🏷️ **Category & Budget Tracking**: Visualize how money flows through your budgets and categories
 - 🔍 **Flexible Filtering**: Exclude accounts, categories, or budgets; set minimum amounts
 - 🎯 **Duplicate Handling**: Automatically handles accounts that appear as both income and expense sources
 - 🚫 **Transfer Exclusion**: Ignores internal transfers between your own accounts
 - 🌈 **Color Coded**: Different node types get distinct colors for easy identification
-- 📅 **Date Range Support**: Analyze any time period with customizable start/end dates
+- 📅 **Date Range Support**: Analyze any time period with customizable start/end dates or use period shortcuts
 
 ## Table of Contents
 
@@ -184,6 +185,42 @@ npx firefly-iii-sankey -p 2024  # Uses environment variables
 firefly-iii-sankey -p 2024      # If installed globally
 ```
 
+### Granularity Control
+
+Control the level of detail in your Sankey diagram:
+
+```bash
+# Show individual revenue/expense accounts as start/end nodes
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --with-accounts
+
+# Exclude categories for a simpler view
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --no-categories
+
+# Exclude budgets for a simpler view
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --no-budgets
+
+# Combine for maximum simplification (categories only)
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \
+  --no-budgets
+
+# Show individual accounts with categories but no budgets
+firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \
+  --with-accounts --no-budgets
+```
+
+**Default behavior:**
+- Categories/budgets are the start and end nodes
+- Flow: [Income Categories] → All Funds → [Budgets] → [Expense Categories]
+- Individual revenue/expense accounts are not shown
+
+**With `--with-accounts`:**
+- Shows individual revenue accounts (salary, freelance, etc.) and expense accounts (stores, restaurants, etc.)
+- Flow: Revenue Accounts → [Categories] → All Funds → [Budgets] → [Categories] → Expense Accounts
+
+**With `--no-categories` or `--no-budgets`:**
+- Removes intermediate nodes for simplified visualization
+- Creates more direct flows between remaining nodes
+
 ### Filtering
 
 ```bash
@@ -230,12 +267,24 @@ firefly-iii-sankey -u https://firefly.example.com -t token -f readable
 The tool creates a clear visualization of your finances by routing all money through a central "All Funds" node:
 
 ```
-Income Flow:
+Income Flow (default):
+[Income Categories] → All Funds
+
+Expense Flow (default):
+All Funds → [Budgets] → [Expense Categories]
+```
+
+With `--with-accounts`, individual revenue and expense accounts are shown:
+
+```
+Income Flow (with --with-accounts):
 Revenue Accounts → [Income Categories] → All Funds
 
-Expense Flow:
+Expense Flow (with --with-accounts):
 All Funds → [Budgets] → [Expense Categories] → Expense Accounts
 ```
+
+Use `--no-categories` or `--no-budgets` to remove intermediate nodes for a simpler view.
 
 ### Key Concepts
 
@@ -279,6 +328,9 @@ This prevents the diagram from incorrectly merging these flows.
 | `--end <date>` | `-e` | End date (YYYY-MM-DD) | Last day of current month |
 | `--output <file>` | `-o` | Write to file instead of console | - |
 | `--format <type>` | `-f` | Output format: sankeymatic, json, readable | readable |
+| `--with-accounts` | | Show individual revenue/expense accounts as start/end nodes | `false` |
+| `--no-categories` | | Exclude category nodes from the diagram | - |
+| `--no-budgets` | | Exclude budget nodes from the diagram | - |
 | `--exclude-accounts <list>` | | Comma-separated account names to exclude | - |
 | `--exclude-categories <list>` | | Comma-separated category names to exclude | - |
 | `--exclude-budgets <list>` | | Comma-separated budget names to exclude | - |
@@ -445,6 +497,42 @@ firefly-iii-sankey \
   -p 2024 \
   -f json \
   -o finances.json
+```
+
+### Example 7: Simplified View Without Budgets
+
+Focus on category-level spending without budget breakdown:
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --no-budgets
+```
+
+### Example 8: Account-Level Detail
+
+See exactly which accounts money flows through:
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024-Q4 \
+  --with-accounts
+```
+
+### Example 9: Maximum Simplification
+
+Direct flows from revenue sources to expense destinations:
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --no-categories --no-budgets
 ```
 
 ## Development

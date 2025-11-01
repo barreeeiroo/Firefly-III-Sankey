@@ -92,6 +92,9 @@ async function generateOutput(
   options: {
     start: string;
     end: string;
+    withAccounts?: boolean;
+    includeCategories?: boolean;
+    includeBudgets?: boolean;
     excludeAccounts?: string[];
     excludeCategories?: string[];
     excludeBudgets?: string[];
@@ -114,6 +117,9 @@ async function generateOutput(
   const processor = new SankeyProcessor({
     startDate: options.start,
     endDate: options.end,
+    withAccounts: options.withAccounts,
+    includeCategories: options.includeCategories,
+    includeBudgets: options.includeBudgets,
     excludeAccounts: options.excludeAccounts,
     excludeCategories: options.excludeCategories,
     excludeBudgets: options.excludeBudgets,
@@ -187,6 +193,9 @@ function main(): void {
     .option('-e, --end <date>', `end date (YYYY-MM-DD) [default: ${defaultDates.end}]`)
     .option('-o, --output <filename>', 'write output to file instead of console')
     .option('-f, --format <type>', 'output format: sankeymatic, json, or readable [default: readable]', 'readable')
+    .option('--with-accounts', 'show individual revenue/expense accounts in the diagram')
+    .option('--no-categories', 'exclude category nodes from the diagram')
+    .option('--no-budgets', 'exclude budget nodes from the diagram')
     .option('--exclude-accounts <list>', 'comma-separated list of account names to exclude', parseList)
     .option('--exclude-categories <list>', 'comma-separated list of category names to exclude', parseList)
     .option('--exclude-budgets <list>', 'comma-separated list of budget names to exclude', parseList)
@@ -215,6 +224,15 @@ Examples:
   # Custom date range (overrides period)
   $ firefly-iii-sankey -u https://firefly.example.com -t token \\
       -s 2024-01-01 -e 2024-01-31 -o sankey.txt
+
+  # Show individual revenue/expense accounts
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --with-accounts
+
+  # Exclude budgets for category-only view
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --no-budgets
+
+  # Exclude categories for budget-only view
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 --no-categories
 
   # Exclude specific accounts and output as JSON
   $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
@@ -294,6 +312,9 @@ Examples:
       const output = await generateOutput(client, {
         start,
         end,
+        withAccounts: options.withAccounts,
+        includeCategories: options.categories,
+        includeBudgets: options.budgets,
         excludeAccounts: options.excludeAccounts,
         excludeCategories: options.excludeCategories,
         excludeBudgets: options.excludeBudgets,
