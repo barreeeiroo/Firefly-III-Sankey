@@ -48,7 +48,7 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 Run immediately without installing:
 
 ```bash
-npx firefly-iii-sankey -u https://your-firefly-instance.com -t your-api-token
+npx firefly-iii-sankey -u https://your-firefly-instance.com -t your-api-token -f sankeymatic
 ```
 
 This downloads and runs the tool temporarily - perfect for one-time use or trying it out!
@@ -99,6 +99,9 @@ npm link  # Optional: for global CLI access
    ```
 
 3. **Copy the output and paste it into [SankeyMatic](https://sankeymatic.com/build/)** to see your visualization!
+
+> **💡 Tip:** In SankeyMatic, click on "About this diagram" right below the actual diagram to see your **Net Worth
+> difference** for the date range (total income minus total expenses).
 
 ## Usage
 
@@ -492,7 +495,8 @@ Monthly Budget [500.00] Groceries
 Groceries [500.00] Supermarket (-)
 ```
 
-Colors are automatically assigned by SankeyMatic when you paste the output into https://sankeymatic.com/build/
+Colors are automatically assigned by SankeyMatic when you paste the output into
+[sankeymatic.com/build](https://sankeymatic.com/build/).
 
 ### JSON Format
 
