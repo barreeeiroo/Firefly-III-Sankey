@@ -1,0 +1,178 @@
+/**
+ * SankeyMatic Formatter for Sankey Diagrams
+ */
+
+import { SankeyDiagram } from '../models';
+
+/**
+ * Format Sankey diagram data in SankeyMatic format
+ * Output can be directly pasted into https://sankeymatic.com/build/
+ */
+export function formatSankeyMatic(data: SankeyDiagram): string {
+  let output = `// Firefly III Sankey Diagram
+// Period: ${data.metadata.startDate} to ${data.metadata.endDate}
+// Generated: ${new Date(data.metadata.generatedAt).toLocaleString()}
+// Currency: ${data.metadata.currency}
+// Paste this into https://sankeymatic.com/build/
+
+`;
+
+  // Color mapping for different node types
+  const typeColors: { [key: string]: string } = {
+    revenue: '#28a745',    // Green for income
+    expense: '#dc3545',    // Red for expenses
+    asset: '#007bff',      // Blue for assets
+    category: '#ffc107',   // Yellow for categories
+    budget: '#17a2b8',     // Cyan for budgets
+  };
+
+  // Add node color declarations
+  const nodeSet = new Set<string>();
+  for (const node of data.nodes) {
+    if (!nodeSet.has(node.name)) {
+      nodeSet.add(node.name);
+      // Special color for "All Funds" central node
+      const color = node.name === 'All Funds' ? '#6610f2' : (typeColors[node.type] || '#6c757d');
+      output += `:${node.name} ${color}\n`;
+    }
+  }
+
+  output += '\n';
+
+  // Categorize flows into sections
+  const incomeToCategories: typeof data.links = [];
+  const categoriesToAllFunds: typeof data.links = [];
+  const incomeDirectToAllFunds: typeof data.links = [];
+  const allFundsToBudgets: typeof data.links = [];
+  const allFundsToCategories: typeof data.links = [];
+  const allFundsToExpenses: typeof data.links = [];
+  const budgetsToCategories: typeof data.links = [];
+  const budgetsToExpenses: typeof data.links = [];
+  const categoriesToExpenses: typeof data.links = [];
+
+  for (const link of data.links) {
+    const source = data.nodes.find((n) => n.id === link.source);
+    const target = data.nodes.find((n) => n.id === link.target);
+
+    if (!source || !target) continue;
+
+    // Income Accounts -> Income Categories
+    if (source.type === 'revenue' && target.type === 'category') {
+      incomeToCategories.push(link);
+    }
+    // Income Categories -> All Funds
+    else if (source.type === 'category' && target.name === 'All Funds') {
+      categoriesToAllFunds.push(link);
+    }
+    // Income Accounts -> All Funds (direct)
+    else if (source.type === 'revenue' && target.name === 'All Funds') {
+      incomeDirectToAllFunds.push(link);
+    }
+    // All Funds -> Budgets
+    else if (source.name === 'All Funds' && target.type === 'budget') {
+      allFundsToBudgets.push(link);
+    }
+    // All Funds -> Expense Categories
+    else if (source.name === 'All Funds' && target.type === 'category') {
+      allFundsToCategories.push(link);
+    }
+    // All Funds -> Expense Accounts (direct)
+    else if (source.name === 'All Funds' && target.type === 'expense') {
+      allFundsToExpenses.push(link);
+    }
+    // Budgets -> Expense Categories
+    else if (source.type === 'budget' && target.type === 'category') {
+      budgetsToCategories.push(link);
+    }
+    // Budgets -> Expense Accounts
+    else if (source.type === 'budget' && target.type === 'expense') {
+      budgetsToExpenses.push(link);
+    }
+    // Expense Categories -> Expense Accounts
+    else if (source.type === 'category' && target.type === 'expense') {
+      categoriesToExpenses.push(link);
+    }
+  }
+
+  // Add flows in organized sections
+  if (incomeToCategories.length > 0) {
+    output += '// Income Accounts -> Income Categories\n';
+    for (const link of incomeToCategories) {
+      const source = data.nodes.find((n) => n.id === link.source);
+      const target = data.nodes.find((n) => n.id === link.target);
+      output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
+    }
+    output += '\n';
+  }
+
+  if (categoriesToAllFunds.length > 0 || incomeDirectToAllFunds.length > 0) {
+    output += '// Income -> All Funds\n';
+    for (const link of [...categoriesToAllFunds, ...incomeDirectToAllFunds]) {
+      const source = data.nodes.find((n) => n.id === link.source);
+      const target = data.nodes.find((n) => n.id === link.target);
+      output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
+    }
+    output += '\n';
+  }
+
+  if (allFundsToBudgets.length > 0) {
+    output += '// All Funds -> Budgets\n';
+    for (const link of allFundsToBudgets) {
+      const source = data.nodes.find((n) => n.id === link.source);
+      const target = data.nodes.find((n) => n.id === link.target);
+      output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
+    }
+    output += '\n';
+  }
+
+  if (budgetsToCategories.length > 0) {
+    output += '// Budgets -> Expense Categories\n';
+    for (const link of budgetsToCategories) {
+      const source = data.nodes.find((n) => n.id === link.source);
+      const target = data.nodes.find((n) => n.id === link.target);
+      output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
+    }
+    output += '\n';
+  }
+
+  if (allFundsToCategories.length > 0) {
+    output += '// All Funds -> Expense Categories (no budget)\n';
+    for (const link of allFundsToCategories) {
+      const source = data.nodes.find((n) => n.id === link.source);
+      const target = data.nodes.find((n) => n.id === link.target);
+      output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
+    }
+    output += '\n';
+  }
+
+  if (categoriesToExpenses.length > 0) {
+    output += '// Expense Categories -> Expense Accounts\n';
+    for (const link of categoriesToExpenses) {
+      const source = data.nodes.find((n) => n.id === link.source);
+      const target = data.nodes.find((n) => n.id === link.target);
+      output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
+    }
+    output += '\n';
+  }
+
+  if (budgetsToExpenses.length > 0) {
+    output += '// Budgets -> Expense Accounts (no category)\n';
+    for (const link of budgetsToExpenses) {
+      const source = data.nodes.find((n) => n.id === link.source);
+      const target = data.nodes.find((n) => n.id === link.target);
+      output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
+    }
+    output += '\n';
+  }
+
+  if (allFundsToExpenses.length > 0) {
+    output += '// All Funds -> Expense Accounts (no budget or category)\n';
+    for (const link of allFundsToExpenses) {
+      const source = data.nodes.find((n) => n.id === link.source);
+      const target = data.nodes.find((n) => n.id === link.target);
+      output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
+    }
+  }
+
+  return output;
+}
