@@ -2,7 +2,7 @@
  * SankeyMatic Formatter for Sankey Diagrams
  */
 
-import { SankeyDiagram } from '../models';
+import { SankeyDiagram } from '../entities';
 
 /**
  * Format Sankey diagram data in SankeyMatic format

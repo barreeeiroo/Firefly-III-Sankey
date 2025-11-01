@@ -3,6 +3,6 @@
  * Export all Sankey-related functionality
  */
 
-export * from './models';
+export * from './entities';
 export * from './processor';
 export * from './formatters';

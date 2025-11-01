@@ -3,7 +3,7 @@
  */
 
 import { Transaction } from '../models';
-import { SankeyDiagram, SankeyNode, SankeyLink } from './models';
+import { SankeyDiagram, SankeyNode, SankeyLink } from './entities';
 
 export interface SankeyProcessorOptions {
   startDate: string;

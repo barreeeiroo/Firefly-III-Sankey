@@ -2,7 +2,7 @@
  * JSON Formatter for Sankey Diagrams
  */
 
-import { SankeyDiagram } from '../models';
+import { SankeyDiagram } from '../entities';
 
 /**
  * Format Sankey diagram data as JSON

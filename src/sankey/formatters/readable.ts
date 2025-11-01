@@ -2,7 +2,7 @@
  * Human-Readable Formatter for Sankey Diagrams
  */
 
-import { SankeyDiagram } from '../models';
+import { SankeyDiagram } from '../entities';
 
 /**
  * Format Sankey diagram data in a human-readable text format

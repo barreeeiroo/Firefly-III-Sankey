@@ -19,7 +19,7 @@ src/
 │   └── transaction.ts       # Transaction and insight models
 └── sankey/                   # Sankey diagram generation module
     ├── index.ts             # Sankey module exports
-    ├── models.ts            # Sankey data structures
+    ├── entities.ts            # Sankey data structures
     ├── processor.ts         # Transaction processing logic
     └── formatters/          # Output format generators
         ├── index.ts         # Formatter exports
