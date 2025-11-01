@@ -368,9 +368,23 @@ If an account or category appears as both revenue/income and expense, the tool a
 - Revenue account: `Account Name (+)`
 - Expense account: `Account Name (-)`
 
-**Categories:**
-- Income category: `Category Name (+)`
-- Expense category: `Category Name (-)`
+**Categories and Budgets:**
+- If a name conflicts across types (account/category/budget), type markers are added BEFORE the name:
+  - Accounts get `(A)`: `(A) Account Name`
+  - Categories get `(C)`: `(C) Category Name`
+  - Budgets get `(B)`: `(B) Budget Name`
+- Income/expense suffixes `(+)` and `(-)` are still added at the END when names appear in both contexts
+
+**Examples:**
+- If you have a "Groceries" account, category, AND budget:
+  - `(A) Groceries (-)` - Groceries expense account
+  - `(C) Groceries (-)` - Groceries expense category
+  - `(B) Groceries` - Groceries budget
+- If you only have a "Entertainment" category (no account or budget with that name):
+  - `Entertainment (-)` - No (C) marker needed
+- If "Vacation" exists as both a category and budget:
+  - `(C) Vacation` - Vacation category
+  - `(B) Vacation` - Vacation budget
 
 This prevents the diagram from incorrectly merging flows that should be separate.
 
@@ -378,10 +392,10 @@ This prevents the diagram from incorrectly merging flows that should be separate
 
 Transactions without categories or budgets are automatically grouped:
 
-- **Transactions without a category**: Labeled as `[NO CATEGORY]`
+- **Transactions without a category**: Labeled as `[NO CATEGORY] (+)` or `[NO CATEGORY] (-)`
 - **Expenses without a budget**: Labeled as `[NO BUDGET]`
 
-This allows you to identify uncategorized or unbudgeted transactions in your visualization.
+These will only have type markers `(C)` or `(B)` if you happen to have an actual budget/category with those exact names, which is unlikely. This allows you to identify uncategorized or unbudgeted transactions in your visualization.
 
 You can exclude these nodes entirely using `--no-categories` or `--no-budgets` flags.
 

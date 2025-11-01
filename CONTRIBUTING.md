@@ -129,6 +129,7 @@ Implements smart grouping to simplify diagrams with many small flows.
   - Groups categories below `--min-category-grouping-amount` into `[OTHER CATEGORIES] (+)` or `[OTHER CATEGORIES] (-)`
   - Aggregates flows and remaps node IDs
   - Only includes `[OTHER]` nodes if actually used
+  - Note: `[OTHER CATEGORIES]` doesn't need `(C)` marker as brackets prevent conflicts with budget names
 
 **Transaction Processing Modes:**
 
@@ -152,6 +153,19 @@ Implements smart grouping to simplify diagrams with many small flows.
 - Expenses without budgets use `[NO BUDGET]`
 - Ensures all transactions are included in visualization
 
+**Type Markers (Conditional):**
+- Type markers are ONLY added when a name conflicts across types (account/category/budget)
+- Markers are placed BEFORE the name:
+  - Accounts get `(A)`: `(A) Account Name`
+  - Categories get `(C)`: `(C) Category Name`
+  - Budgets get `(B)`: `(B) Budget Name`
+- Income/expense suffixes `(+)` and `(-)` are still added at the END
+- Example: If you have "Groceries" as account, category, AND budget:
+  - `(A) Groceries (-)` (expense account)
+  - `(C) Groceries (-)` (expense category)
+  - `(B) Groceries` (budget)
+- If no conflict: `Entertainment (-)` (category only, no marker needed)
+
 **Implementation Details:**
 
 ```typescript
@@ -168,9 +182,15 @@ const allFundsId = this.getOrCreateNode('All Funds', 'asset');
 const assetInId = this.getOrCreateNode(`${accountName} (+)`, 'asset');  // Receives income
 const assetOutId = this.getOrCreateNode(`${accountName} (-)`, 'asset'); // Pays expenses
 
-// Default category/budget names for missing data
+// Type markers only added when name conflicts across types (account/category/budget)
 const categoryName = split.category_name || '[NO CATEGORY]';
-const budgetName = split.budget_name || '[NO BUDGET]';
+const needsTypeMarker = this.categoryConflicts.has(categoryName);
+const typeMarker = needsTypeMarker ? '(C) ' : '';  // Marker BEFORE name
+
+// Categories may also need directional suffixes (+/-) if they appear in both income and expense
+// Example: "(C) Groceries (-)" for expense category (with conflict)
+// Example: "Entertainment (-)" for expense category (no conflict)
+const fullName = `${typeMarker}${categoryName} (-)`;  // Type marker before, suffix after
 ```
 
 #### Formatters (`formatters/`)

@@ -45,6 +45,9 @@ export class SankeyProcessor {
   private options: SankeyProcessorOptions;
   private duplicateAccountNames: Set<string> = new Set();
   private duplicateCategoryNames: Set<string> = new Set();
+  private accountConflicts: Set<string> = new Set();
+  private categoryConflicts: Set<string> = new Set();
+  private budgetConflicts: Set<string> = new Set();
 
   constructor(options: SankeyProcessorOptions) {
     this.options = options;
@@ -52,11 +55,15 @@ export class SankeyProcessor {
 
   /**
    * Identify account and category names that appear as both revenue and expense
+   * Also identify names that conflict across types (accounts, budgets, categories)
    */
   private identifyDuplicateNames(transactions: Transaction[]): void {
     const duplicates = identifyDuplicates(transactions, this.options);
     this.duplicateAccountNames = duplicates.accounts;
     this.duplicateCategoryNames = duplicates.categories;
+    this.accountConflicts = duplicates.accountConflicts;
+    this.categoryConflicts = duplicates.categoryConflicts;
+    this.budgetConflicts = duplicates.budgetConflicts;
   }
 
   /**
@@ -157,29 +164,44 @@ export class SankeyProcessor {
     const hasCategory = this.options.includeCategories !== false;
     const showExpenseAccount = this.options.withAccounts;
 
-    // Get category name with suffix if duplicate, or use default
+    // Get category name with optional (C) type marker before name and +/- suffix if duplicate or default
     const getCategoryName = () => {
       const categoryName = split.category_name || '[NO CATEGORY]';
+      const needsTypeMarker = this.categoryConflicts.has(categoryName);
+      const typeMarker = needsTypeMarker ? '(C) ' : '';
+
       // Always add (-) suffix for expenses if duplicate OR if it's [NO CATEGORY]
       if (this.duplicateCategoryNames.has(categoryName) || categoryName === '[NO CATEGORY]') {
-        return `${categoryName} (-)`;
+        return `${typeMarker}${categoryName} (-)`;
       }
-      return categoryName;
+      return `${typeMarker}${categoryName}`;
     };
 
-    // Get budget name or use default
+    // Get budget name with optional (B) type marker before name
     const getBudgetName = () => {
-      return split.budget_name || '[NO BUDGET]';
+      const budgetName = split.budget_name || '[NO BUDGET]';
+      const needsTypeMarker = this.budgetConflicts.has(budgetName);
+      const typeMarker = needsTypeMarker ? '(B) ' : '';
+      return `${typeMarker}${budgetName}`;
+    };
+
+    // Get expense account name with optional (A) type marker before name
+    const getExpenseAccountName = () => {
+      const accountName = split.destination_name;
+      const needsTypeMarker = this.accountConflicts.has(accountName);
+      const typeMarker = needsTypeMarker ? '(A) ' : '';
+
+      // Add (-) suffix if this account name appears as both revenue and expense
+      if (this.duplicateAccountNames.has(accountName)) {
+        return `${typeMarker}${accountName} (-)`;
+      }
+      return `${typeMarker}${accountName}`;
     };
 
     // Determine the final destination
     let finalDestId: number;
     if (showExpenseAccount) {
-      // Only add (-) suffix if this account name appears as both revenue and expense
-      const destName = this.duplicateAccountNames.has(split.destination_name)
-        ? `${split.destination_name} (-)`
-        : split.destination_name;
-      finalDestId = this.getOrCreateNode(destName, 'expense');
+      finalDestId = this.getOrCreateNode(getExpenseAccountName(), 'expense');
     } else if (hasCategory) {
       // End at category
       finalDestId = this.getOrCreateNode(getCategoryName(), 'category');
@@ -188,10 +210,7 @@ export class SankeyProcessor {
       finalDestId = this.getOrCreateNode(getBudgetName(), 'budget');
     } else {
       // No category or budget, must show account
-      const destName = this.duplicateAccountNames.has(split.destination_name)
-        ? `${split.destination_name} (-)`
-        : split.destination_name;
-      finalDestId = this.getOrCreateNode(destName, 'expense');
+      finalDestId = this.getOrCreateNode(getExpenseAccountName(), 'expense');
     }
 
     if (hasBudget && hasCategory && showExpenseAccount) {
@@ -241,31 +260,41 @@ export class SankeyProcessor {
     const hasCategory = this.options.includeCategories !== false;
     const showRevenueAccount = this.options.withAccounts;
 
-    // Get category name with suffix if duplicate, or use default
+    // Get category name with optional (C) type marker before name and +/- suffix if duplicate or default
     const getCategoryName = () => {
       const categoryName = split.category_name || '[NO CATEGORY]';
+      const needsTypeMarker = this.categoryConflicts.has(categoryName);
+      const typeMarker = needsTypeMarker ? '(C) ' : '';
+
       // Always add (+) suffix for income if duplicate OR if it's [NO CATEGORY]
       if (this.duplicateCategoryNames.has(categoryName) || categoryName === '[NO CATEGORY]') {
-        return `${categoryName} (+)`;
+        return `${typeMarker}${categoryName} (+)`;
       }
-      return categoryName;
+      return `${typeMarker}${categoryName}`;
+    };
+
+    // Get revenue account name with optional (A) type marker before name
+    const getRevenueAccountName = () => {
+      const accountName = split.source_name;
+      const needsTypeMarker = this.accountConflicts.has(accountName);
+      const typeMarker = needsTypeMarker ? '(A) ' : '';
+
+      // Add (+) suffix if this account name appears as both revenue and expense
+      if (this.duplicateAccountNames.has(accountName)) {
+        return `${typeMarker}${accountName} (+)`;
+      }
+      return `${typeMarker}${accountName}`;
     };
 
     if (showRevenueAccount && hasCategory) {
       // Revenue Account → Category → All Funds
-      const sourceName = this.duplicateAccountNames.has(split.source_name)
-        ? `${split.source_name} (+)`
-        : split.source_name;
-      const revenueId = this.getOrCreateNode(sourceName, 'revenue');
+      const revenueId = this.getOrCreateNode(getRevenueAccountName(), 'revenue');
       const categoryId = this.getOrCreateNode(getCategoryName(), 'category');
       this.addFlow(revenueId, categoryId, amount, split.currency_code);
       this.addFlow(categoryId, destId, amount, split.currency_code);
     } else if (showRevenueAccount) {
       // Revenue Account → All Funds (no category)
-      const sourceName = this.duplicateAccountNames.has(split.source_name)
-        ? `${split.source_name} (+)`
-        : split.source_name;
-      const revenueId = this.getOrCreateNode(sourceName, 'revenue');
+      const revenueId = this.getOrCreateNode(getRevenueAccountName(), 'revenue');
       this.addFlow(revenueId, destId, amount, split.currency_code);
     } else if (hasCategory) {
       // Category → All Funds (no account shown)
@@ -273,10 +302,7 @@ export class SankeyProcessor {
       this.addFlow(categoryId, destId, amount, split.currency_code);
     } else {
       // Direct flow: must show account when no category
-      const sourceName = this.duplicateAccountNames.has(split.source_name)
-        ? `${split.source_name} (+)`
-        : split.source_name;
-      const revenueId = this.getOrCreateNode(sourceName, 'revenue');
+      const revenueId = this.getOrCreateNode(getRevenueAccountName(), 'revenue');
       this.addFlow(revenueId, destId, amount, split.currency_code);
     }
   }
