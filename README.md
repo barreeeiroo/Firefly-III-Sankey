@@ -23,6 +23,7 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Example Visualizations](#example-visualizations)
 - [Usage](#usage)
 - [How It Works](#how-it-works)
 - [Options Reference](#options-reference)
@@ -98,6 +99,16 @@ npm link  # Optional: for global CLI access
 
 > **💡 Tip:** In SankeyMatic, click on "About this diagram" right below the actual diagram to see your **Net Worth
 > difference** for the date range (total income minus total expenses).
+
+## Example Visualizations
+
+**Default behavior** - Shows aggregated flows through budgets and categories:
+
+![Default Sankey Diagram](https://i.imgur.com/EdZQslV.png)
+
+**With `--with-accounts` flag** - Shows individual revenue and expense accounts:
+
+![Sankey with Accounts](https://i.imgur.com/wS0F6un.png)
 
 ## Usage
 
@@ -302,7 +313,7 @@ Expense Flow (default):
 All Funds → [Budgets] → [Expense Categories]
 ```
 
-With `--with-accounts`, individual revenue and expense accounts are shown:
+With `--with-accounts`, individual revenue and expense accounts are shown (see [example visualization](#example-visualizations) above):
 
 ```
 Income Flow (with --with-accounts):
