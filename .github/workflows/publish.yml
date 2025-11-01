@@ -33,7 +33,7 @@ jobs:
         run: npm pack --dry-run
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --provenance --access public
 
       - name: Get package version
         id: package_version
