@@ -36,8 +36,12 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 ### Prerequisites
 
 - Node.js 18 or higher
-- A running Firefly III instance
+- A running Firefly III instance with **API version 6.3.0 or higher (below 7.0.0)**
 - API token from your Firefly III account
+
+> **Note:** The tool validates API compatibility at startup. If your Firefly III instance uses an unsupported API version, you can:
+> - Bypass the check with `--disable-api-version-check` (functionality may be limited or broken)
+> - [Request support for your API version](https://github.com/barreeeiroo/Firefly-III-Sankey/issues) by opening a GitHub issue
 
 ### Quick Try with npx (No Installation Required!)
 
@@ -431,6 +435,7 @@ firefly-iii-sankey -p 2024 --with-accounts \
 | `--min-amount-account <amount>` | | Minimum total for accounts (requires `--with-accounts`) | - |
 | `--min-account-grouping-amount <amount>` | | Group accounts below this into `[OTHER ACCOUNTS]` | - |
 | `--min-category-grouping-amount <amount>` | | Group categories below this into `[OTHER CATEGORIES]` | - |
+| `--disable-api-version-check` | | Bypass API version compatibility check (use at your own risk) | - |
 | `--version` | `-V` | Show version number | - |
 | `--help` | `-h` | Show help | - |
 

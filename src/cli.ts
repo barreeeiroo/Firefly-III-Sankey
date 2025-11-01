@@ -6,6 +6,7 @@ import * as path from 'path';
 import { FireflyClient } from './client';
 import { SankeyProcessor, formatJson, formatSankeyMatic, formatReadable } from './sankey';
 import { parsePeriod } from './utils/period-parser';
+import { isApiVersionSupported, getVersionErrorMessage } from './utils/version-checker';
 import packageJson from '../package.json';
 
 const program = new Command();
@@ -13,13 +14,17 @@ const program = new Command();
 /**
  * Display connection information
  */
-async function displayConnectionInfo(client: FireflyClient): Promise<void> {
+async function displayConnectionInfo(client: FireflyClient, disableVersionCheck: boolean = false): Promise<void> {
   console.log('\nConnecting to Firefly III...\n');
 
   try {
     // Get system and user information
     const about = await client.getAbout();
     const user = await client.getAboutUser();
+
+    // Check API version compatibility
+    const apiVersion = about.data.api_version;
+    const isSupported = isApiVersionSupported(apiVersion);
 
     // Display connection information
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -41,6 +46,25 @@ async function displayConnectionInfo(client: FireflyClient): Promise<void> {
     console.log(`  Account Status:      ${user.data.attributes.blocked ? 'Blocked' : 'Active'}`);
 
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    // Version compatibility check
+    if (!isSupported) {
+      if (disableVersionCheck) {
+        console.log('⚠️  API Version Warning');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(getVersionErrorMessage(apiVersion));
+        console.log('Version check disabled - proceeding at your own risk.');
+        console.log('The tool may not work correctly with this API version.\n');
+      } else {
+        console.error('❌ Unsupported API Version');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error(getVersionErrorMessage(apiVersion));
+        console.error('\nOptions:');
+        console.error('  • Bypass this check with --disable-api-version-check (may not work correctly)');
+        console.error('  • Request support for your API version: https://github.com/barreeeiroo/Firefly-III-Sankey/issues\n');
+        process.exit(1);
+      }
+    }
 
   } catch (error) {
     if (error instanceof Error) {
@@ -200,7 +224,7 @@ function main(): void {
     .option('-s, --start <date>', `start date (YYYY-MM-DD) [default: ${defaultDates.start}]`)
     .option('-e, --end <date>', `end date (YYYY-MM-DD) [default: ${defaultDates.end}]`)
     .option('-o, --output <filename>', 'write output to file instead of console')
-    .option('-f, --format <type>', 'output format: sankeymatic, json, or readable [default: readable]', 'readable')
+    .option('-f, --format <type>', 'output format: readable, sankeymatic, or json [default: readable]', 'readable')
     .option('--with-accounts', 'show individual revenue/expense accounts in the diagram')
     .option('--with-assets', 'break down All Funds into individual asset accounts with transfers')
     .option('--no-categories', 'exclude category nodes from the diagram')
@@ -212,6 +236,7 @@ function main(): void {
     .option('--min-amount-account <amount>', 'minimum total amount for accounts/nodes to include', parseFloat)
     .option('--min-account-grouping-amount <amount>', 'group accounts below this amount into [OTHER ACCOUNTS]', parseFloat)
     .option('--min-category-grouping-amount <amount>', 'group categories below this amount into [OTHER CATEGORIES]', parseFloat)
+    .option('--disable-api-version-check', 'disable API version compatibility check (use at your own risk)')
     .addHelpText('after', `
 Environment Variables:
   FIREFLY_BASE_URL    Firefly III base URL (alternative to --base-url)
@@ -357,7 +382,7 @@ Examples:
 
       // Create client and display connection information
       const client = new FireflyClient({ baseUrl, token });
-      await displayConnectionInfo(client);
+      await displayConnectionInfo(client, options.disableApiVersionCheck);
 
       // Generate and output diagram data
       const output = await generateOutput(client, {

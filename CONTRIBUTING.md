@@ -177,6 +177,7 @@ Command-line interface implementation using Commander.js.
 
 **Features:**
 - Credential management (flags or environment variables)
+- API version compatibility checking (supports API 6.3.0 - 6.x.x)
 - Date range selection with sensible defaults and period shortcuts (YYYY, YYYY-MM, YYYY-QX, YYYY-MM-DD)
 - Granularity control (`--with-accounts`, `--with-assets`)
 - Category/budget toggling (`--no-categories`, `--no-budgets`)
@@ -260,6 +261,30 @@ Asset-to-asset transfers are handled differently based on mode:
 - **Caveat**: This mode represents cash flows (money in motion) rather than account balances (money at rest). Transfers between accounts create "circular" movements that can inflate total flow values, as the same money gets counted multiple times. The diagram is useful for understanding how money moves through accounts but doesn't directly represent actual balances or total income/expenses.
 
 This design allows users to choose the level of detail they need.
+
+### 6. API Version Compatibility
+
+The tool enforces API version compatibility to ensure reliable operation.
+
+**Version Checking** (`src/utils/version-checker.ts`)
+- Validates that the Firefly III API version is within the supported range
+- Currently supports: **API version 6.3.0 or higher, below 7.0.0**
+- Checks are performed during connection establishment
+- Users can bypass checks with `--disable-api-version-check` flag (not recommended)
+
+**Updating Supported Versions:**
+1. Modify `SUPPORTED_API_VERSION` constants in `src/utils/version-checker.ts`
+2. Test thoroughly with the new API version
+3. Update version requirements in README.md and CONTRIBUTING.md
+4. Document any breaking changes or new features in release notes
+
+**Version Comparison Logic:**
+- Uses semantic versioning comparison (major.minor.patch)
+- Minimum check: API version >= 6.3.0
+- Maximum check: API version < 7.0.0 (exclusive upper bound)
+- Falls back to comparing numeric parts if version format differs
+
+Users encountering unsupported versions are directed to open a GitHub issue to request support.
 
 ## Adding New Features
 
