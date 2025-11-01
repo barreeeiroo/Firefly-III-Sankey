@@ -1,6 +1,6 @@
 {
   "name": "firefly-iii-sankey",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Generate beautiful Sankey diagrams from your Firefly III financial data. Visualize money flows through income, budgets, categories, and expenses with SankeyMatic-compatible output.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
