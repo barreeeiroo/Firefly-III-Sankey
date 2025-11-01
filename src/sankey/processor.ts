@@ -2,8 +2,11 @@
  * Sankey Diagram Data Processor
  */
 
-import { Transaction } from '../models';
+import { Transaction, TransactionSplit } from '../models';
 import { SankeyDiagram, SankeyNode, SankeyLink } from './entities';
+import { identifyDuplicates, getMostCommonCurrency } from './transactions';
+import { shouldExcludeTransaction, filterAccountsByAmount } from './filters';
+import { groupSmallNodes } from './groups';
 
 export interface SankeyProcessorOptions {
   startDate: string;
@@ -50,60 +53,10 @@ export class SankeyProcessor {
   /**
    * Identify account and category names that appear as both revenue and expense
    */
-  private identifyDuplicateAccounts(transactions: Transaction[]): void {
-    const revenueAccounts = new Set<string>();
-    const expenseAccounts = new Set<string>();
-    const revenueCategories = new Set<string>();
-    const expenseCategories = new Set<string>();
-
-    for (const transaction of transactions) {
-      for (const split of transaction.attributes.transactions) {
-        // Skip if excluded
-        if (this.shouldExclude(split)) {
-          continue;
-        }
-
-        // Skip if below minimum transaction amount
-        const amount = parseFloat(split.amount);
-        if (this.options.minAmountTransaction && Math.abs(amount) < this.options.minAmountTransaction) {
-          continue;
-        }
-
-        // Skip transfers
-        if (split.type === 'transfer') {
-          continue;
-        }
-
-        // Track revenue and expense account names
-        if (split.type === 'deposit') {
-          revenueAccounts.add(split.source_name);
-          if (split.category_name) {
-            revenueCategories.add(split.category_name);
-          }
-        } else if (split.type === 'withdrawal') {
-          expenseAccounts.add(split.destination_name);
-          if (split.category_name) {
-            expenseCategories.add(split.category_name);
-          }
-        }
-      }
-    }
-
-    // Find accounts that appear in both sets
-    this.duplicateAccountNames.clear();
-    for (const name of revenueAccounts) {
-      if (expenseAccounts.has(name)) {
-        this.duplicateAccountNames.add(name);
-      }
-    }
-
-    // Find categories that appear in both sets
-    this.duplicateCategoryNames.clear();
-    for (const name of revenueCategories) {
-      if (expenseCategories.has(name)) {
-        this.duplicateCategoryNames.add(name);
-      }
-    }
+  private identifyDuplicateNames(transactions: Transaction[]): void {
+    const duplicates = identifyDuplicates(transactions, this.options);
+    this.duplicateAccountNames = duplicates.accounts;
+    this.duplicateCategoryNames = duplicates.categories;
   }
 
   /**
@@ -115,13 +68,13 @@ export class SankeyProcessor {
     this.flows = {};
 
     // First pass: identify accounts that appear as both revenue and expense
-    this.identifyDuplicateAccounts(transactions);
+    this.identifyDuplicateNames(transactions);
 
     // Process each transaction
     for (const transaction of transactions) {
       for (const split of transaction.attributes.transactions) {
         // Skip if excluded
-        if (this.shouldExclude(split)) {
+        if (shouldExcludeTransaction(split, this.options)) {
           continue;
         }
 
@@ -155,7 +108,7 @@ export class SankeyProcessor {
 
     // Group small accounts and categories if thresholds are specified
     if (this.options.minAccountGroupingAmount || this.options.minCategoryGroupingAmount) {
-      const grouped = this.groupSmallNodes(
+      const grouped = groupSmallNodes(
         nodes,
         links,
         this.options.minAccountGroupingAmount,
@@ -167,7 +120,7 @@ export class SankeyProcessor {
 
     // Filter accounts by minimum amount if specified
     if (this.options.minAmountAccount && this.options.withAccounts) {
-      const filtered = this.filterAccountsByAmount(nodes, links, this.options.minAmountAccount);
+      const filtered = filterAccountsByAmount(nodes, links, this.options.minAmountAccount);
       nodes = filtered.nodes;
       links = filtered.links;
     }
@@ -179,7 +132,7 @@ export class SankeyProcessor {
         startDate: this.options.startDate,
         endDate: this.options.endDate,
         generatedAt: new Date().toISOString(),
-        currency: this.getMostCommonCurrency(transactions),
+        currency: getMostCommonCurrency(transactions),
       },
     };
   }
@@ -191,7 +144,7 @@ export class SankeyProcessor {
    * - With accounts: All Funds → [Budget] → [Category] → Expense Account
    * - With assets: Asset (-) → [Budget] → [Category] → (Expense Account)
    */
-  private processWithdrawal(split: any) {
+  private processWithdrawal(split: TransactionSplit) {
     const amount = Math.abs(parseFloat(split.amount));
 
     // Determine source: specific asset account or "All Funds"
@@ -276,7 +229,7 @@ export class SankeyProcessor {
    * - With accounts: Revenue Account → [Category] → All Funds
    * - With assets: (Revenue Account) → [Category] → Asset (+)
    */
-  private processDeposit(split: any) {
+  private processDeposit(split: TransactionSplit) {
     const amount = Math.abs(parseFloat(split.amount));
 
     // Determine destination: specific asset account or "All Funds"
@@ -333,7 +286,7 @@ export class SankeyProcessor {
    * Flow: Asset (+) → Asset (-)
    * Only called when withAssets is enabled
    */
-  private processTransfer(split: any) {
+  private processTransfer(split: TransactionSplit) {
     const amount = Math.abs(parseFloat(split.amount));
 
     // Source asset account (+) sends money
@@ -397,302 +350,5 @@ export class SankeyProcessor {
     links.sort((a, b) => b.value - a.value);
 
     return links;
-  }
-
-  /**
-   * Filter out revenue and expense accounts below minimum amount
-   */
-  private filterAccountsByAmount(
-    nodes: SankeyNode[],
-    links: SankeyLink[],
-    minAmount: number
-  ): { nodes: SankeyNode[]; links: SankeyLink[] } {
-    // Calculate total flow for each revenue and expense account
-    const accountTotals = new Map<number, number>();
-
-    for (const link of links) {
-      const sourceNode = nodes[link.source];
-      const targetNode = nodes[link.target];
-
-      // Sum flows for revenue accounts (incoming to them)
-      if (sourceNode.type === 'revenue') {
-        accountTotals.set(link.source, (accountTotals.get(link.source) || 0) + link.value);
-      }
-
-      // Sum flows for expense accounts (outgoing from them)
-      if (targetNode.type === 'expense') {
-        accountTotals.set(link.target, (accountTotals.get(link.target) || 0) + link.value);
-      }
-    }
-
-    // Identify accounts to remove
-    const accountsToRemove = new Set<number>();
-    for (const [nodeId, total] of accountTotals.entries()) {
-      if (total < minAmount) {
-        accountsToRemove.add(nodeId);
-      }
-    }
-
-    // Filter out links connected to removed accounts
-    const filteredLinks = links.filter(
-      (link) => {
-        const sourceNode = nodes[link.source];
-        const targetNode = nodes[link.target];
-
-        // Remove link if either end is a filtered revenue/expense account
-        if (sourceNode.type === 'revenue' && accountsToRemove.has(link.source)) {
-          return false;
-        }
-        if (targetNode.type === 'expense' && accountsToRemove.has(link.target)) {
-          return false;
-        }
-
-        return true;
-      }
-    );
-
-    // Get set of node IDs that are still referenced in links
-    const referencedNodes = new Set<number>();
-    for (const link of filteredLinks) {
-      referencedNodes.add(link.source);
-      referencedNodes.add(link.target);
-    }
-
-    // Filter nodes to only those still referenced
-    const filteredNodes = nodes.filter((node) => referencedNodes.has(node.id));
-
-    // Rebuild node IDs to be sequential
-    const nodeIdMap = new Map<number, number>();
-    const remappedNodes = filteredNodes.map((node, index) => {
-      nodeIdMap.set(node.id, index);
-      return { ...node, id: index };
-    });
-
-    // Remap link node references
-    const remappedLinks = filteredLinks.map((link) => ({
-      ...link,
-      source: nodeIdMap.get(link.source)!,
-      target: nodeIdMap.get(link.target)!,
-    }));
-
-    return {
-      nodes: remappedNodes,
-      links: remappedLinks,
-    };
-  }
-
-  /**
-   * Group small accounts and categories into [OTHER ACCOUNTS] and [OTHER CATEGORIES]
-   */
-  private groupSmallNodes(
-    nodes: SankeyNode[],
-    links: SankeyLink[],
-    minAccountAmount?: number,
-    minCategoryAmount?: number
-  ): { nodes: SankeyNode[]; links: SankeyLink[] } {
-    // Calculate total flow for each node
-    const nodeTotals = new Map<number, number>();
-
-    for (const link of links) {
-      const sourceNode = nodes[link.source];
-      const targetNode = nodes[link.target];
-
-      // Sum flows for revenue accounts (outgoing from them)
-      if (sourceNode.type === 'revenue') {
-        nodeTotals.set(link.source, (nodeTotals.get(link.source) || 0) + link.value);
-      }
-
-      // Sum flows for expense accounts (incoming to them)
-      if (targetNode.type === 'expense') {
-        nodeTotals.set(link.target, (nodeTotals.get(link.target) || 0) + link.value);
-      }
-
-      // Sum flows for categories (both directions)
-      if (sourceNode.type === 'category') {
-        nodeTotals.set(link.source, (nodeTotals.get(link.source) || 0) + link.value);
-      }
-      if (targetNode.type === 'category') {
-        nodeTotals.set(link.target, (nodeTotals.get(link.target) || 0) + link.value);
-      }
-    }
-
-    // Identify nodes to group
-    const nodesToGroup = new Set<number>();
-    for (const [nodeId, total] of nodeTotals.entries()) {
-      const node = nodes[nodeId];
-
-      if (minAccountAmount && (node.type === 'revenue' || node.type === 'expense')) {
-        if (total < minAccountAmount) {
-          nodesToGroup.add(nodeId);
-        }
-      }
-
-      if (minCategoryAmount && node.type === 'category') {
-        if (total < minCategoryAmount) {
-          nodesToGroup.add(nodeId);
-        }
-      }
-    }
-
-    // If no nodes to group, return as-is
-    if (nodesToGroup.size === 0) {
-      return { nodes, links };
-    }
-
-    // Create a map for node ID remapping
-    const nodeIdMap = new Map<number, number>();
-    const newNodes: SankeyNode[] = [];
-    let nextId = 0;
-
-    // Create "OTHER" nodes
-    const otherRevenueId = nextId++;
-    const otherExpenseId = nextId++;
-    const otherCategoryIncomeId = nextId++;
-    const otherCategoryExpenseId = nextId++;
-
-    newNodes.push({ id: otherRevenueId, name: '[OTHER ACCOUNTS] (+)', type: 'revenue' });
-    newNodes.push({ id: otherExpenseId, name: '[OTHER ACCOUNTS] (-)', type: 'expense' });
-    newNodes.push({ id: otherCategoryIncomeId, name: '[OTHER CATEGORIES] (+)', type: 'category' });
-    newNodes.push({ id: otherCategoryExpenseId, name: '[OTHER CATEGORIES] (-)', type: 'category' });
-
-    // Track if we actually use these OTHER nodes
-    const usedOtherNodes = new Set<number>();
-
-    // Add non-grouped nodes and build mapping
-    for (const node of nodes) {
-      if (!nodesToGroup.has(node.id)) {
-        nodeIdMap.set(node.id, nextId);
-        newNodes.push({ ...node, id: nextId });
-        nextId++;
-      } else {
-        // Map grouped nodes to their respective OTHER node
-        if (node.type === 'revenue') {
-          nodeIdMap.set(node.id, otherRevenueId);
-          usedOtherNodes.add(otherRevenueId);
-        } else if (node.type === 'expense') {
-          nodeIdMap.set(node.id, otherExpenseId);
-          usedOtherNodes.add(otherExpenseId);
-        } else if (node.type === 'category') {
-          // Determine if it's income or expense category based on name suffix
-          if (node.name.includes(' (+)')) {
-            nodeIdMap.set(node.id, otherCategoryIncomeId);
-            usedOtherNodes.add(otherCategoryIncomeId);
-          } else {
-            nodeIdMap.set(node.id, otherCategoryExpenseId);
-            usedOtherNodes.add(otherCategoryExpenseId);
-          }
-        }
-      }
-    }
-
-    // Aggregate flows and remap
-    const flowAggregation = new Map<string, number>();
-
-    for (const link of links) {
-      const newSource = nodeIdMap.get(link.source)!;
-      const newTarget = nodeIdMap.get(link.target)!;
-      const key = `${newSource}->${newTarget}:${link.currency}`;
-
-      flowAggregation.set(key, (flowAggregation.get(key) || 0) + link.value);
-    }
-
-    // Build new links from aggregated flows
-    const newLinks: SankeyLink[] = [];
-    for (const [key, value] of flowAggregation.entries()) {
-      const [flow, currency] = key.split(':');
-      const [source, target] = flow.split('->').map(Number);
-
-      newLinks.push({
-        source,
-        target,
-        value: Math.round(value * 100) / 100,
-        currency,
-      });
-    }
-
-    // Filter out unused OTHER nodes
-    const finalNodes = newNodes.filter((node) => {
-      if (node.id === otherRevenueId || node.id === otherExpenseId ||
-          node.id === otherCategoryIncomeId || node.id === otherCategoryExpenseId) {
-        return usedOtherNodes.has(node.id);
-      }
-      return true;
-    });
-
-    // Rebuild IDs to be sequential
-    const finalNodeIdMap = new Map<number, number>();
-    const finalNodesSequential = finalNodes.map((node, index) => {
-      finalNodeIdMap.set(node.id, index);
-      return { ...node, id: index };
-    });
-
-    // Remap links
-    const finalLinks = newLinks.map((link) => ({
-      ...link,
-      source: finalNodeIdMap.get(link.source)!,
-      target: finalNodeIdMap.get(link.target)!,
-    }));
-
-    // Sort links by value descending
-    finalLinks.sort((a, b) => b.value - a.value);
-
-    return {
-      nodes: finalNodesSequential,
-      links: finalLinks,
-    };
-  }
-
-  /**
-   * Check if a transaction should be excluded
-   */
-  private shouldExclude(split: any): boolean {
-    if (this.options.excludeAccounts) {
-      if (
-        this.options.excludeAccounts.includes(split.source_name) ||
-        this.options.excludeAccounts.includes(split.destination_name)
-      ) {
-        return true;
-      }
-    }
-
-    if (this.options.excludeCategories && split.category_name) {
-      if (this.options.excludeCategories.includes(split.category_name)) {
-        return true;
-      }
-    }
-
-    if (this.options.excludeBudgets && split.budget_name) {
-      if (this.options.excludeBudgets.includes(split.budget_name)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Get the most common currency from transactions
-   */
-  private getMostCommonCurrency(transactions: Transaction[]): string {
-    const currencyCounts: { [key: string]: number } = {};
-
-    for (const transaction of transactions) {
-      for (const split of transaction.attributes.transactions) {
-        const currency = split.currency_code;
-        currencyCounts[currency] = (currencyCounts[currency] || 0) + 1;
-      }
-    }
-
-    let mostCommon = 'USD';
-    let maxCount = 0;
-
-    for (const [currency, count] of Object.entries(currencyCounts)) {
-      if (count > maxCount) {
-        maxCount = count;
-        mostCommon = currency;
-      }
-    }
-
-    return mostCommon;
   }
 }

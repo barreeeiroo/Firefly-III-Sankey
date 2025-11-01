@@ -17,10 +17,16 @@ src/
 │   ├── index.ts             # Model exports
 │   ├── about.ts             # About/system models
 │   └── transaction.ts       # Transaction and insight models
+├── utils/                    # Utility modules
+│   ├── period-parser.ts     # Period string parsing (YYYY, YYYY-MM, etc.)
+│   └── version-checker.ts   # API version compatibility checking
 └── sankey/                   # Sankey diagram generation module
     ├── index.ts             # Sankey module exports
-    ├── entities.ts            # Sankey data structures
-    ├── processor.ts         # Transaction processing logic
+    ├── entities.ts          # Sankey data structures
+    ├── processor.ts         # Main transaction processor
+    ├── transactions.ts      # Transaction analysis utilities (duplicates, currency)
+    ├── filters.ts           # Filtering logic (exclusions, min amounts)
+    ├── groups.ts            # Grouping logic ([OTHER] nodes)
     └── formatters/          # Output format generators
         ├── index.ts         # Formatter exports
         ├── json.ts          # JSON formatter
@@ -66,55 +72,85 @@ Type-safe data models for API responses and internal data structures.
 
 ### 3. Sankey Module (`src/sankey/`)
 
-Core business logic for generating Sankey diagrams.
+Core business logic for generating Sankey diagrams. The module is organized into focused submodules for maintainability.
 
 #### Processor (`processor.ts`)
 
-The `SankeyProcessor` class transforms Firefly III transactions into Sankey diagram data.
+The `SankeyProcessor` class is the main orchestrator that transforms Firefly III transactions into Sankey diagram data.
 
-**Key Features:**
+**Responsibilities:**
+- Manages nodes and flows (creation, tracking)
+- Orchestrates the processing pipeline
+- Implements transaction processing logic (withdrawal, deposit, transfer)
+- Coordinates with utility modules for filtering, grouping, and analysis
 
-1. **Duplicate Detection**
-   - First pass identifies accounts and categories appearing as both revenue/income and expense
-   - Adds `(+)` suffix to revenue/income and `(-)` to expense
-   - Only applies suffixes when necessary to prevent node conflicts
+**Processing Pipeline:**
 
-2. **Transaction Processing**
-   - **Default Mode**:
-     - Deposits (Income): `[Category] → All Funds`
-     - Withdrawals (Expenses): `All Funds → [Budget] → [Category]`
-     - Transfers: Excluded (internal movements)
+1. **Identify Duplicates** - Uses `transactions.ts` to find accounts/categories appearing in both income and expenses
+2. **Process Transactions** - Transform each transaction into flows between nodes:
+   - `processWithdrawal()` - Handles expense transactions
+   - `processDeposit()` - Handles income transactions
+   - `processTransfer()` - Handles asset-to-asset transfers (when `--with-assets` enabled)
+3. **Build Links** - Convert flow accumulations into Sankey links
+4. **Group Small Nodes** - Uses `groups.ts` to aggregate accounts/categories below thresholds (if enabled)
+5. **Filter Accounts** - Uses `filters.ts` to remove accounts below minimum total (if enabled)
+6. **Return Diagram** - Final nodes and links with metadata
 
-   - **With `--with-accounts`**:
-     - Deposits: `Revenue Account → [Category] → All Funds`
-     - Withdrawals: `All Funds → [Budget] → [Category] → Expense Account`
+#### Transaction Utilities (`transactions.ts`)
 
-   - **With `--with-assets`**:
-     - Deposits: `[Category] → Asset Account (+)`
-     - Withdrawals: `Asset Account (-) → [Budget] → [Category]`
-     - Transfers: `Source Asset (+) → Destination Asset (-)`
-     - Each asset appears twice with (+) and (-) suffixes
+Handles transaction analysis and metadata extraction.
 
-3. **Missing Data Handling**
-   - Transactions without categories use `[NO CATEGORY] (+)` or `[NO CATEGORY] (-)`
-   - Expenses without budgets use `[NO BUDGET]`
-   - Ensures all transactions are included in visualization
+**Functions:**
+- `identifyDuplicates()` - First pass to identify accounts and categories appearing as both revenue/income and expense
+  - Returns which names need `(+)` and `(-)` suffixes to prevent node conflicts
+- `getMostCommonCurrency()` - Determines the primary currency for the diagram
 
-4. **Flow Aggregation**
-   - Combines multiple transactions between same nodes
-   - Accumulates amounts by currency
-   - Maintains node uniqueness via type-prefixed keys
+#### Filtering Utilities (`filters.ts`)
 
-5. **Filtering**
-   - Exclude specific accounts, categories, or budgets
-   - Minimum transaction amount threshold (`--min-amount-transaction`)
-   - Minimum account total threshold (`--min-amount-account`)
-   - Respects user-defined exclusions
+Implements all filtering logic to exclude or remove nodes based on criteria.
 
-6. **Smart Grouping**
-   - Group small accounts below threshold into `[OTHER ACCOUNTS] (+)` or `[OTHER ACCOUNTS] (-)`
-   - Group small categories below threshold into `[OTHER CATEGORIES] (+)` or `[OTHER CATEGORIES] (-)`
-   - Simplifies diagrams with many small flows
+**Functions:**
+- `shouldExcludeTransaction()` - Check if a transaction should be excluded based on:
+  - Account name exclusions (`--exclude-accounts`)
+  - Category name exclusions (`--exclude-categories`)
+  - Budget name exclusions (`--exclude-budgets`)
+- `filterAccountsByAmount()` - Remove revenue/expense accounts below minimum total (`--min-amount-account`)
+  - Calculates totals for each account
+  - Removes accounts below threshold
+  - Rebuilds node IDs to remain sequential
+
+#### Grouping Utilities (`groups.ts`)
+
+Implements smart grouping to simplify diagrams with many small flows.
+
+**Functions:**
+- `groupSmallNodes()` - Aggregate small accounts/categories into `[OTHER]` nodes:
+  - Groups accounts below `--min-account-grouping-amount` into `[OTHER ACCOUNTS] (+)` or `[OTHER ACCOUNTS] (-)`
+  - Groups categories below `--min-category-grouping-amount` into `[OTHER CATEGORIES] (+)` or `[OTHER CATEGORIES] (-)`
+  - Aggregates flows and remaps node IDs
+  - Only includes `[OTHER]` nodes if actually used
+
+**Transaction Processing Modes:**
+
+1. **Default Mode**:
+   - Deposits (Income): `[Category] → All Funds`
+   - Withdrawals (Expenses): `All Funds → [Budget] → [Category]`
+   - Transfers: Excluded (internal movements)
+
+2. **With `--with-accounts`**:
+   - Deposits: `Revenue Account → [Category] → All Funds`
+   - Withdrawals: `All Funds → [Budget] → [Category] → Expense Account`
+
+3. **With `--with-assets`**:
+   - Deposits: `[Category] → Asset Account (+)`
+   - Withdrawals: `Asset Account (-) → [Budget] → [Category]`
+   - Transfers: `Source Asset (+) → Destination Asset (-)`
+   - Each asset appears twice with (+) and (-) suffixes
+
+**Missing Data Handling:**
+- Transactions without categories use `[NO CATEGORY] (+)` or `[NO CATEGORY] (-)`
+- Expenses without budgets use `[NO BUDGET]`
+- Ensures all transactions are included in visualization
 
 **Implementation Details:**
 
@@ -136,15 +172,6 @@ const assetOutId = this.getOrCreateNode(`${accountName} (-)`, 'asset'); // Pays 
 const categoryName = split.category_name || '[NO CATEGORY]';
 const budgetName = split.budget_name || '[NO BUDGET]';
 ```
-
-**Processing Pipeline:**
-
-1. **Identify Duplicates** - First pass to find accounts/categories appearing in both income and expenses
-2. **Process Transactions** - Transform each transaction into flows between nodes
-3. **Build Links** - Convert flow accumulations into Sankey links
-4. **Group Small Nodes** - Aggregate accounts/categories below thresholds (if enabled)
-5. **Filter Accounts** - Remove accounts below minimum total (if enabled)
-6. **Return Diagram** - Final nodes and links with metadata
 
 #### Formatters (`formatters/`)
 
@@ -304,10 +331,13 @@ Users encountering unsupported versions are directed to open a GitHub issue to r
 
 ### Adding New Filtering Options
 
-1. Add option to `SankeyProcessorOptions` interface
-2. Update `shouldExclude()` or add new filtering logic
-3. Add CLI flag in `src/cli.ts`
-4. Update documentation
+1. Add option to `SankeyProcessorOptions` interface in `src/sankey/processor.ts`
+2. Implement filtering logic in `src/sankey/filters.ts`:
+   - Add a new filtering function or extend existing ones
+   - Ensure proper TypeScript types (no `any`)
+3. Call the filtering function from the processor pipeline
+4. Add CLI flag in `src/cli.ts`
+5. Update README.md and CONTRIBUTING.md documentation
 
 ## Development Workflow
 
@@ -332,11 +362,15 @@ npm start
 
 ### Code Style
 
-- Use TypeScript strict mode
-- Prefer explicit types over inference for public APIs
-- Document complex logic with comments
-- Keep functions focused and single-purpose
-- Use descriptive variable names
+- **Use TypeScript strict mode** - `tsconfig.json` has `"strict": true` enabled
+- **Never use `any` type** - Always use proper TypeScript types (e.g., `TransactionSplit` instead of `any`)
+  - The strict mode configuration prevents implicit `any` types
+  - All function parameters must have explicit types
+- **Prefer explicit types over inference** for public APIs and exported functions
+- **Document complex logic** with comments explaining the "why" not just the "what"
+- **Keep functions focused and single-purpose** - If a function grows beyond ~50 lines, consider splitting it
+- **Use descriptive variable names** - `revenueAccounts` not `ra`, `categoryId` not `cId`
+- **Modular organization** - Split large files into focused modules (see `sankey/` structure)
 
 ### Testing Your Changes
 
@@ -352,10 +386,21 @@ npm start
 ## Architecture Benefits
 
 - **Separation of Concerns**: Each module has clear responsibility
-- **Type Safety**: TypeScript prevents common errors
-- **Extensibility**: Easy to add new formats or features
+  - Processor orchestrates, utilities handle specific tasks
+  - Filtering logic isolated in `filters.ts`
+  - Grouping logic isolated in `groups.ts`
+  - Transaction analysis isolated in `transactions.ts`
+- **Type Safety**: TypeScript strict mode prevents common errors
+  - No `any` types allowed
+  - Compile-time type checking catches bugs early
+- **Extensibility**: Easy to add new formats, filters, or features
+  - Modular structure allows adding functionality without touching core logic
 - **Maintainability**: Clear structure makes navigation easy
+  - Small, focused files (~100-350 lines) instead of monolithic files
+  - Well-defined interfaces between modules
 - **Testability**: Modules can be tested independently
+  - Pure functions for filtering and grouping
+  - Clear inputs and outputs
 
 ## Common Tasks
 
