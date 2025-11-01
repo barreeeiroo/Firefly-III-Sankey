@@ -8,7 +8,7 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 
 ## Features
 
-- 🎨 **Multiple Output Formats**: SankeyMatic (default), JSON, or human-readable text
+- 🎨 **Multiple Output Formats**: Human-readable text (default), SankeyMatic, or JSON
 - 📊 **Smart Aggregation**: All income flows through "All Funds", then distributes to expenses
 - 🎚️ **Granularity Control**: Choose between aggregated or account-level views; show asset account flows with transfers; include/exclude categories and budgets
 - 🏷️ **Category & Budget Tracking**: Visualize how money flows through your budgets and categories
@@ -86,12 +86,12 @@ npm link  # Optional: for global CLI access
 
    Using npx (no installation):
    ```bash
-   npx firefly-iii-sankey -u https://your-firefly-instance.com -t your-api-token
+   npx firefly-iii-sankey -u https://your-firefly-instance.com -t your-api-token -f sankeymatic
    ```
 
    Or if installed globally:
    ```bash
-   firefly-iii-sankey -u https://your-firefly-instance.com -t your-api-token
+   firefly-iii-sankey -u https://your-firefly-instance.com -t your-api-token -f sankeymatic
    ```
 
 3. **Copy the output and paste it into [SankeyMatic](https://sankeymatic.com/build/)** to see your visualization!
@@ -275,14 +275,14 @@ firefly-iii-sankey -u https://firefly.example.com -t token \
 ### Output Formats
 
 ```bash
-# SankeyMatic format (default) - paste into sankeymatic.com
+# Human-readable text (default) - for quick review
 firefly-iii-sankey -u https://firefly.example.com -t token
+
+# SankeyMatic format - paste into sankeymatic.com for visualization
+firefly-iii-sankey -u https://firefly.example.com -t token -f sankeymatic
 
 # JSON format - for custom processing
 firefly-iii-sankey -u https://firefly.example.com -t token -f json
-
-# Human-readable text - for quick review
-firefly-iii-sankey -u https://firefly.example.com -t token -f readable
 ```
 
 ## How It Works
@@ -419,7 +419,7 @@ firefly-iii-sankey -p 2024 --with-accounts \
 | `--start <date>` | `-s` | Start date (YYYY-MM-DD) | First day of current month |
 | `--end <date>` | `-e` | End date (YYYY-MM-DD) | Last day of current month |
 | `--output <file>` | `-o` | Write to file instead of console | - |
-| `--format <type>` | `-f` | Output format: sankeymatic, json, readable | readable |
+| `--format <type>` | `-f` | Output format: readable, sankeymatic, json | readable |
 | `--with-accounts` | | Show individual revenue/expense accounts as start/end nodes | `false` |
 | `--with-assets` | | Break down All Funds into individual asset accounts with transfers | `false` |
 | `--no-categories` | | Exclude category nodes from the diagram | - |
@@ -441,7 +441,29 @@ firefly-iii-sankey -p 2024 --with-accounts \
 
 ## Output Formats
 
-### SankeyMatic Format (Default)
+### Readable Format (Default)
+
+Human-friendly text summary:
+
+```
+Firefly III Sankey Diagram
+============================
+Period: 2024-01-01 to 2024-01-31
+Currency: USD
+
+Nodes (5):
+  [0] Salary (revenue)
+  [1] All Funds (asset)
+  [2] Groceries (category)
+  [3] Supermarket (expense)
+
+Flows (3):
+  Salary → All Funds: 3000.00 USD
+  All Funds → Groceries: 500.00 USD
+  Groceries → Supermarket: 500.00 USD
+```
+
+### SankeyMatic Format
 
 Ready-to-use format for [SankeyMatic](https://sankeymatic.com/build/):
 
@@ -449,18 +471,13 @@ Ready-to-use format for [SankeyMatic](https://sankeymatic.com/build/):
 // Firefly III Sankey Diagram
 // Period: 2024-01-01 to 2024-01-31
 
-:Salary (+) #28a745
-:All Funds #6610f2
-:Groceries #ffc107
-:Supermarket (-) #dc3545
-
 // Income Accounts -> Income Categories
 Salary (+) [3000.00] Salary Category
 
-// Income -> All Funds
+// Income -> Assets
 Salary Category [3000.00] All Funds
 
-// All Funds -> Budgets
+// Assets -> Budgets
 All Funds [1000.00] Monthly Budget
 
 // Budgets -> Expense Categories
@@ -492,28 +509,6 @@ Structured data for custom processing:
     "currency": "USD"
   }
 }
-```
-
-### Readable Format
-
-Human-friendly text summary:
-
-```
-Firefly III Sankey Diagram
-============================
-Period: 2024-01-01 to 2024-01-31
-Currency: USD
-
-Nodes (5):
-  [0] Salary (revenue)
-  [1] All Funds (asset)
-  [2] Groceries (category)
-  [3] Supermarket (expense)
-
-Flows (3):
-  Salary → All Funds: 3000.00 USD
-  All Funds → Groceries: 500.00 USD
-  Groceries → Supermarket: 500.00 USD
 ```
 
 ## Examples
