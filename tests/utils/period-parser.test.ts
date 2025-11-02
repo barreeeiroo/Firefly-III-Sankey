@@ -1,4 +1,4 @@
-import { parsePeriod, isValidDate, DateRange } from '../../src/utils/period-parser';
+import { parsePeriod, isValidDate, parseQuarter, DateRange } from '../../src/utils/period-parser';
 
 describe('period-parser', () => {
   describe('parsePeriod', () => {
@@ -240,6 +240,27 @@ describe('period-parser', () => {
           'Invalid period format: "". Expected YYYY, YYYY-MM, YYYY-QX, or YYYY-MM-DD'
         );
       });
+    });
+  });
+
+  describe('parseQuarter', () => {
+    it('should parse valid quarters', () => {
+      expect(parseQuarter('2024-Q1')).toEqual({
+        start: '2024-01-01',
+        end: '2024-03-31',
+      });
+
+      expect(parseQuarter('2024-Q4')).toEqual({
+        start: '2024-10-01',
+        end: '2024-12-31',
+      });
+    });
+
+    it('should throw error for invalid quarter format', () => {
+      expect(() => parseQuarter('2024-Q5')).toThrow('Invalid quarter format: 2024-Q5');
+      expect(() => parseQuarter('2024-Q0')).toThrow('Invalid quarter format: 2024-Q0');
+      expect(() => parseQuarter('2024-QX')).toThrow('Invalid quarter format: 2024-QX');
+      expect(() => parseQuarter('invalid')).toThrow('Invalid quarter format: invalid');
     });
   });
 

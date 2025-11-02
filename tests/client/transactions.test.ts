@@ -218,6 +218,30 @@ describe('TransactionsClient', () => {
       );
       expect(result).toEqual(mockResponse);
     });
+
+    it('should include account IDs in query params when provided', async () => {
+      const mockResponse: InsightResponse = {
+        data: [],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      await client.getExpenseByAsset({
+        start: '2024-01-01',
+        end: '2024-01-31',
+        accounts: ['1', '2', '3'],
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://firefly.example.com/api/v1/insight/expense/asset?start=2024-01-01&end=2024-01-31&accounts%5B%5D=1&accounts%5B%5D=2&accounts%5B%5D=3',
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
   });
 
   describe('getIncomeInsights', () => {
@@ -302,6 +326,30 @@ describe('TransactionsClient', () => {
         })
       );
       expect(result).toEqual(mockResponse);
+    });
+
+    it('should include account IDs in query params when provided', async () => {
+      const mockResponse: InsightResponse = {
+        data: [],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      await client.getIncomeByAsset({
+        start: '2024-01-01',
+        end: '2024-01-31',
+        accounts: ['4', '5'],
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://firefly.example.com/api/v1/insight/income/asset?start=2024-01-01&end=2024-01-31&accounts%5B%5D=4&accounts%5B%5D=5',
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
     });
   });
 

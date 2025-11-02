@@ -81,8 +81,9 @@ function parseMonth(period: string): DateRange {
 
 /**
  * Parse quarter (YYYY-QX)
+ * Exported for direct use and testing
  */
-function parseQuarter(period: string): DateRange {
+export function parseQuarter(period: string): DateRange {
   const match = period.match(/^(\d{4})-Q([1-4])$/i);
   if (!match) {
     throw new Error(`Invalid quarter format: ${period}`);
