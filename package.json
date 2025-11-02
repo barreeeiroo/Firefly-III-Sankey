@@ -13,7 +13,9 @@
     "start": "npm run build && node dist/cli.js",
     "dev": "ts-node src/cli.ts",
     "watch": "tsc --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "files": [
     "dist",
@@ -52,7 +54,10 @@
     "commander": "^14.0.2"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.0"
   }

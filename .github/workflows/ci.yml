@@ -33,5 +33,20 @@ jobs:
       - name: Check TypeScript types
         run: npx tsc --noEmit
 
+      - name: Run tests
+        run: npm test
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-${{ matrix.node-version }}
+          fail_ci_if_error: false
+
       - name: Verify package can be packed
         run: npm pack --dry-run

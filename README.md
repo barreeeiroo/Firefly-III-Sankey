@@ -7,6 +7,7 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 [![SankeyMatic Compatible](https://img.shields.io/badge/SankeyMatic-Compatible-blue)](https://sankeymatic.com/build/)
 [![npm](https://img.shields.io/npm/v/firefly-iii-sankey)](https://www.npmjs.com/package/firefly-iii-sankey)
 [![CI](https://img.shields.io/github/actions/workflow/status/barreeeiroo/Firefly-III-Sankey/ci.yml)](https://github.com/barreeeiroo/Firefly-III-Sankey/actions)
+[![codecov](https://codecov.io/gh/barreeeiroo/Firefly-III-Sankey/branch/main/graph/badge.svg)](https://codecov.io/gh/barreeeiroo/Firefly-III-Sankey)
 [![Node.js](https://img.shields.io/node/v/firefly-iii-sankey)](package.json)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)](tsconfig.json)
 [![License](https://img.shields.io/github/license/barreeeiroo/Firefly-III-Sankey)](LICENSE)
