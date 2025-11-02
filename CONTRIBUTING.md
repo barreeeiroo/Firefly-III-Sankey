@@ -224,7 +224,7 @@ Command-line interface implementation using Commander.js.
 
 **Features:**
 - Credential management (flags or environment variables)
-- API version compatibility checking (supports API 6.3.0 - 6.x.x)
+- API version compatibility checking (supports API 6.1.22 - 6.x.x)
 - Date range selection with sensible defaults and period shortcuts (YYYY, YYYY-MM, YYYY-QX, YYYY-MM-DD)
 - Granularity control (`--with-accounts`, `--with-assets`)
 - Category/budget toggling (`--no-categories`, `--no-budgets`)
@@ -315,7 +315,7 @@ The tool enforces API version compatibility to ensure reliable operation.
 
 **Version Checking** (`src/utils/version-checker.ts`)
 - Validates that the Firefly III API version is within the supported range
-- Currently supports: **API version 6.3.0 or higher, below 7.0.0**
+- Currently supports: **API version 6.1.22 or higher, below 7.0.0**
 - Checks are performed during connection establishment
 - Users can bypass checks with `--disable-api-version-check` flag (not recommended)
 
@@ -327,7 +327,7 @@ The tool enforces API version compatibility to ensure reliable operation.
 
 **Version Comparison Logic:**
 - Uses semantic versioning comparison (major.minor.patch)
-- Minimum check: API version >= 6.3.0
+- Minimum check: API version >= 6.1.22
 - Maximum check: API version < 7.0.0 (exclusive upper bound)
 - Falls back to comparing numeric parts if version format differs
 

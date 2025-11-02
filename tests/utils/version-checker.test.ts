@@ -58,19 +58,21 @@ describe('version-checker', () => {
 
   describe('isApiVersionSupported', () => {
     it('should return true for minimum supported version', () => {
-      expect(isApiVersionSupported('6.3.0')).toBe(true);
+      expect(isApiVersionSupported('6.1.22')).toBe(true);
     });
 
     it('should return true for versions within the supported range', () => {
-      expect(isApiVersionSupported('6.3.1')).toBe(true);
+      expect(isApiVersionSupported('6.1.23')).toBe(true);
+      expect(isApiVersionSupported('6.2.0')).toBe(true);
+      expect(isApiVersionSupported('6.3.0')).toBe(true);
       expect(isApiVersionSupported('6.4.0')).toBe(true);
       expect(isApiVersionSupported('6.5.0')).toBe(true);
       expect(isApiVersionSupported('6.9.9')).toBe(true);
     });
 
     it('should return false for versions below minimum', () => {
-      expect(isApiVersionSupported('6.2.9')).toBe(false);
-      expect(isApiVersionSupported('6.2.0')).toBe(false);
+      expect(isApiVersionSupported('6.1.21')).toBe(false);
+      expect(isApiVersionSupported('6.1.0')).toBe(false);
       expect(isApiVersionSupported('6.0.0')).toBe(false);
       expect(isApiVersionSupported('5.9.9')).toBe(false);
     });
@@ -86,8 +88,8 @@ describe('version-checker', () => {
     });
 
     it('should handle edge cases near the boundaries', () => {
-      expect(isApiVersionSupported('6.2.99')).toBe(false);
-      expect(isApiVersionSupported('6.3.0')).toBe(true);
+      expect(isApiVersionSupported('6.1.21')).toBe(false);
+      expect(isApiVersionSupported('6.1.22')).toBe(true);
       expect(isApiVersionSupported('6.99.99')).toBe(true);
       expect(isApiVersionSupported('7.0.0')).toBe(false);
     });
@@ -95,13 +97,13 @@ describe('version-checker', () => {
 
   describe('getVersionErrorMessage', () => {
     it('should return message for versions too old', () => {
-      const message = getVersionErrorMessage('6.2.0');
-      expect(message).toBe('API version 6.2.0 is too old. Minimum supported version is 6.3.0.');
+      const message = getVersionErrorMessage('6.1.0');
+      expect(message).toBe('API version 6.1.0 is too old. Minimum supported version is 6.1.22.');
     });
 
     it('should return message for versions way too old', () => {
       const message = getVersionErrorMessage('5.0.0');
-      expect(message).toBe('API version 5.0.0 is too old. Minimum supported version is 6.3.0.');
+      expect(message).toBe('API version 5.0.0 is too old. Minimum supported version is 6.1.22.');
     });
 
     it('should return message for versions too new', () => {
@@ -122,7 +124,7 @@ describe('version-checker', () => {
     });
 
     it('should handle edge cases', () => {
-      expect(getVersionErrorMessage('6.2.99')).toContain('too old');
+      expect(getVersionErrorMessage('6.1.21')).toContain('too old');
       expect(getVersionErrorMessage('6.99.99')).toContain('is not supported');
       expect(getVersionErrorMessage('7.0.1')).toContain('too new');
     });
@@ -130,7 +132,7 @@ describe('version-checker', () => {
 
   describe('SUPPORTED_API_VERSION constant', () => {
     it('should have expected min and max values', () => {
-      expect(SUPPORTED_API_VERSION.min).toBe('6.3.0');
+      expect(SUPPORTED_API_VERSION.min).toBe('6.1.22');
       expect(SUPPORTED_API_VERSION.max).toBe('7.0.0');
     });
 
@@ -143,7 +145,11 @@ describe('version-checker', () => {
     it('should correctly validate a range of versions', () => {
       const testVersions = [
         { version: '5.0.0', supported: false },
-        { version: '6.2.9', supported: false },
+        { version: '6.1.0', supported: false },
+        { version: '6.1.21', supported: false },
+        { version: '6.1.22', supported: true },
+        { version: '6.1.23', supported: true },
+        { version: '6.2.0', supported: true },
         { version: '6.3.0', supported: true },
         { version: '6.3.1', supported: true },
         { version: '6.5.0', supported: true },
@@ -158,11 +164,11 @@ describe('version-checker', () => {
     });
 
     it('should provide appropriate error messages for each invalid version', () => {
-      const tooOld = getVersionErrorMessage('6.2.0');
+      const tooOld = getVersionErrorMessage('6.1.0');
       const tooNew = getVersionErrorMessage('7.0.0');
 
       expect(tooOld).toContain('too old');
-      expect(tooOld).toContain('6.3.0');
+      expect(tooOld).toContain('6.1.22');
       expect(tooNew).toContain('too new');
       expect(tooNew).toContain('7.0.0');
     });

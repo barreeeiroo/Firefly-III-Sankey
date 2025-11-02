@@ -4,7 +4,7 @@
  */
 
 export const SUPPORTED_API_VERSION = {
-  min: '6.3.0',
+  min: '6.1.22',
   max: '7.0.0',
 };
 

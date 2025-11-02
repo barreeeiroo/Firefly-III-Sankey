@@ -43,7 +43,7 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 ### Prerequisites
 
 - Node.js 20 or higher
-- A running Firefly III instance with **API version 6.3.0 or higher (below 7.0.0)**
+- A running Firefly III instance with **API version 6.1.22 or higher (below 7.0.0)**
 - API token from your Firefly III account
 
 ### Quick Try with npx (No Installation Required!)
