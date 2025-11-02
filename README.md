@@ -4,9 +4,12 @@ A powerful command-line tool that generates Sankey diagrams from your [Firefly I
 
 🖼️ **[View example visualizations](#example-visualizations)**
 
-![SankeyMatic Compatible](https://img.shields.io/badge/SankeyMatic-Compatible-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+[![SankeyMatic Compatible](https://img.shields.io/badge/SankeyMatic-Compatible-blue)](https://sankeymatic.com/build/)
+[![npm](https://img.shields.io/npm/v/firefly-iii-sankey)](https://www.npmjs.com/package/firefly-iii-sankey)
+[![CI](https://img.shields.io/github/actions/workflow/status/barreeeiroo/Firefly-III-Sankey/ci.yml)](https://github.com/barreeeiroo/Firefly-III-Sankey/actions)
+[![Node.js](https://img.shields.io/node/v/firefly-iii-sankey)](package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)](tsconfig.json)
+[![License](https://img.shields.io/github/license/barreeeiroo/Firefly-III-Sankey)](LICENSE)
 
 ## Features
 
@@ -772,4 +775,4 @@ This tool was built with the assistance of Generative AI. All final decisions, c
 
 ## License
 
-MIT
+[MIT License](LICENSE)
