@@ -273,6 +273,14 @@ firefly-iii-sankey -u https://firefly.example.com -t token \
 firefly-iii-sankey -u https://firefly.example.com -t token \
   --exclude-budgets "Irregular Expenses"
 
+# Filter by tags (only include transactions with specific tags)
+firefly-iii-sankey -u https://firefly.example.com -t token \
+  --include-tags "vacation,travel"
+
+# Exclude transactions with specific tags
+firefly-iii-sankey -u https://firefly.example.com -t token \
+  --exclude-tags "internal,reimbursement"
+
 # Only show transactions above $50
 firefly-iii-sankey -u https://firefly.example.com -t token \
   --min-amount-transaction 50
@@ -463,6 +471,8 @@ firefly-iii-sankey -p 2024 --with-accounts \
 | `--exclude-accounts <list>` | | Comma-separated account names to exclude | - |
 | `--exclude-categories <list>` | | Comma-separated category names to exclude | - |
 | `--exclude-budgets <list>` | | Comma-separated budget names to exclude | - |
+| `--include-tags <list>` | | Only include transactions with at least one of these tags | - |
+| `--exclude-tags <list>` | | Exclude transactions with any of these tags | - |
 | `--min-amount-transaction <amount>` | | Minimum transaction amount to include | - |
 | `--min-amount-account <amount>` | | Minimum total for accounts (requires `--with-accounts`) | - |
 | `--min-account-grouping-amount <amount>` | | Group accounts below this into `[OTHER ACCOUNTS]` | - |
@@ -723,6 +733,43 @@ firefly-iii-sankey \
   -p 2024 \
   --with-accounts \
   --with-assets
+```
+
+### Example 15: Filter by Tags (Include)
+
+Show only transactions tagged with specific tags (e.g., vacation-related expenses):
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --include-tags "vacation,travel,holiday"
+```
+
+### Example 16: Filter by Tags (Exclude)
+
+Exclude transactions with specific tags (e.g., internal transfers or reimbursements):
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --exclude-tags "internal,reimbursement,duplicate"
+```
+
+### Example 17: Combined Tag Filtering
+
+Combine include and exclude tag filters (only show business expenses, but exclude reimbursements):
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  --include-tags "business,work" \
+  --exclude-tags "reimbursed"
 ```
 
 ## Development

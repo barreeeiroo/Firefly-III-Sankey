@@ -172,6 +172,98 @@ describe('filters', () => {
 
       expect(shouldExcludeTransaction(mockSplit, options)).toBe(true);
     });
+
+    it('should include transaction with matching includeTags', () => {
+      const splitWithTags = { ...mockSplit, tags: ['vacation', 'travel'] };
+      const options: SankeyProcessorOptions = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        includeTags: ['vacation'],
+      };
+
+      expect(shouldExcludeTransaction(splitWithTags, options)).toBe(false);
+    });
+
+    it('should exclude transaction without matching includeTags', () => {
+      const splitWithTags = { ...mockSplit, tags: ['business'] };
+      const options: SankeyProcessorOptions = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        includeTags: ['vacation', 'travel'],
+      };
+
+      expect(shouldExcludeTransaction(splitWithTags, options)).toBe(true);
+    });
+
+    it('should exclude transaction with no tags when includeTags is specified', () => {
+      const options: SankeyProcessorOptions = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        includeTags: ['vacation'],
+      };
+
+      expect(shouldExcludeTransaction(mockSplit, options)).toBe(true);
+    });
+
+    it('should exclude transaction with matching excludeTags', () => {
+      const splitWithTags = { ...mockSplit, tags: ['internal', 'transfer'] };
+      const options: SankeyProcessorOptions = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        excludeTags: ['internal'],
+      };
+
+      expect(shouldExcludeTransaction(splitWithTags, options)).toBe(true);
+    });
+
+    it('should not exclude transaction without matching excludeTags', () => {
+      const splitWithTags = { ...mockSplit, tags: ['vacation'] };
+      const options: SankeyProcessorOptions = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        excludeTags: ['internal', 'reimbursement'],
+      };
+
+      expect(shouldExcludeTransaction(splitWithTags, options)).toBe(false);
+    });
+
+    it('should handle both includeTags and excludeTags together', () => {
+      const splitWithTags = { ...mockSplit, tags: ['business', 'travel'] };
+      const options: SankeyProcessorOptions = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        includeTags: ['business'],
+        excludeTags: ['reimbursed'],
+      };
+
+      // Has business tag (included) and no reimbursed tag (not excluded)
+      expect(shouldExcludeTransaction(splitWithTags, options)).toBe(false);
+    });
+
+    it('should exclude when transaction has both included and excluded tags', () => {
+      const splitWithTags = { ...mockSplit, tags: ['business', 'reimbursed'] };
+      const options: SankeyProcessorOptions = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        includeTags: ['business'],
+        excludeTags: ['reimbursed'],
+      };
+
+      // Has business tag (included) but also has reimbursed tag (excluded)
+      expect(shouldExcludeTransaction(splitWithTags, options)).toBe(true);
+    });
+
+    it('should not exclude when transaction with tags has empty includeTags and excludeTags', () => {
+      const splitWithTags = { ...mockSplit, tags: ['some-tag'] };
+      const options: SankeyProcessorOptions = {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        includeTags: [],
+        excludeTags: [],
+      };
+
+      expect(shouldExcludeTransaction(splitWithTags, options)).toBe(false);
+    });
   });
 
   describe('filterAccountsByAmount', () => {

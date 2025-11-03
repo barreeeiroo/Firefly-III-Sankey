@@ -18,6 +18,8 @@ export interface SankeyProcessorOptions {
   excludeAccounts?: string[];
   excludeCategories?: string[];
   excludeBudgets?: string[];
+  includeTags?: string[];         // Only include transactions with at least one of these tags
+  excludeTags?: string[];         // Exclude transactions with any of these tags
   minAmountTransaction?: number;  // Minimum amount for individual transactions
   minAmountAccount?: number;      // Minimum total amount for accounts/nodes
   minAccountGroupingAmount?: number;   // Group accounts below this amount into [OTHER ACCOUNTS]

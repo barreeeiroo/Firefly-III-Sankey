@@ -114,6 +114,8 @@ Implements all filtering logic to exclude or remove nodes based on criteria.
   - Account name exclusions (`--exclude-accounts`)
   - Category name exclusions (`--exclude-categories`)
   - Budget name exclusions (`--exclude-budgets`)
+  - Tag inclusion filtering (`--include-tags`) - Transaction must have at least one of the specified tags
+  - Tag exclusion filtering (`--exclude-tags`) - Transaction must not have any of the specified tags
 - `filterAccountsByAmount()` - Remove revenue/expense accounts below minimum total (`--min-amount-account`)
   - Calculates totals for each account
   - Removes accounts below threshold
@@ -230,6 +232,7 @@ Command-line interface implementation using Commander.js.
 - Category/budget toggling (`--no-categories`, `--no-budgets`)
 - Filtering options:
   - Exclude lists (accounts, categories, budgets)
+  - Tag filtering (`--include-tags`, `--exclude-tags`)
   - Minimum transaction amount (`--min-amount-transaction`)
   - Minimum account total (`--min-amount-account`)
   - Account grouping (`--min-account-grouping-amount`)

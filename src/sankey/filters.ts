@@ -34,6 +34,23 @@ export function shouldExcludeTransaction(
     }
   }
 
+  // Check tag filters
+  if (options.includeTags && options.includeTags.length > 0) {
+    // If includeTags is specified, transaction must have at least one of the included tags
+    const hasIncludedTag = split.tags.some(tag => options.includeTags!.includes(tag));
+    if (!hasIncludedTag) {
+      return true;
+    }
+  }
+
+  if (options.excludeTags && options.excludeTags.length > 0) {
+    // If excludeTags is specified, transaction must not have any of the excluded tags
+    const hasExcludedTag = split.tags.some(tag => options.excludeTags!.includes(tag));
+    if (hasExcludedTag) {
+      return true;
+    }
+  }
+
   return false;
 }
 

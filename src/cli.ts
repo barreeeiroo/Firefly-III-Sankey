@@ -123,6 +123,8 @@ async function generateOutput(
     excludeAccounts?: string[];
     excludeCategories?: string[];
     excludeBudgets?: string[];
+    includeTags?: string[];
+    excludeTags?: string[];
     minAmountTransaction?: number;
     minAmountAccount?: number;
     minAccountGroupingAmount?: number;
@@ -152,6 +154,8 @@ async function generateOutput(
     excludeAccounts: options.excludeAccounts,
     excludeCategories: options.excludeCategories,
     excludeBudgets: options.excludeBudgets,
+    includeTags: options.includeTags,
+    excludeTags: options.excludeTags,
     minAmountTransaction: options.minAmountTransaction,
     minAmountAccount: options.minAmountAccount,
     minAccountGroupingAmount: options.minAccountGroupingAmount,
@@ -232,6 +236,8 @@ function main(): void {
     .option('--exclude-accounts <list>', 'comma-separated list of account names to exclude', parseList)
     .option('--exclude-categories <list>', 'comma-separated list of category names to exclude', parseList)
     .option('--exclude-budgets <list>', 'comma-separated list of budget names to exclude', parseList)
+    .option('--include-tags <list>', 'comma-separated list of tags to include (only transactions with at least one of these tags)', parseList)
+    .option('--exclude-tags <list>', 'comma-separated list of tags to exclude (exclude transactions with any of these tags)', parseList)
     .option('--min-amount-transaction <amount>', 'minimum transaction amount to include', parseFloat)
     .option('--min-amount-account <amount>', 'minimum total amount for accounts/nodes to include', parseFloat)
     .option('--min-account-grouping-amount <amount>', 'group accounts below this amount into [OTHER ACCOUNTS]', parseFloat)
@@ -293,6 +299,14 @@ Examples:
   # Group small accounts (< $100) into [OTHER ACCOUNTS]
   $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
       --with-accounts --min-account-grouping-amount 100
+
+  # Filter by tags (only include transactions with specific tags)
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
+      --include-tags "vacation,travel"
+
+  # Exclude transactions with specific tags
+  $ firefly-iii-sankey -u https://firefly.example.com -t token -p 2024 \\
+      --exclude-tags "internal,reimbursement"
 
   # Using environment variables
   $ FIREFLY_BASE_URL=https://firefly.example.com FIREFLY_API_TOKEN=token firefly-iii-sankey -p 2024-Q2
@@ -395,6 +409,8 @@ Examples:
         excludeAccounts: options.excludeAccounts,
         excludeCategories: options.excludeCategories,
         excludeBudgets: options.excludeBudgets,
+        includeTags: options.includeTags,
+        excludeTags: options.excludeTags,
         minAmountTransaction: options.minAmountTransaction,
         minAmountAccount: options.minAmountAccount,
         minAccountGroupingAmount: options.minAccountGroupingAmount,
