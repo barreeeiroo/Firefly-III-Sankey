@@ -130,6 +130,7 @@ async function generateOutput(
     minAccountGroupingAmount?: number;
     minCategoryGroupingAmount?: number;
     format?: 'sankeymatic' | 'json' | 'readable';
+    url?: boolean;
   }
 ): Promise<string> {
   console.log(`\nFetching transactions from ${options.start} to ${options.end}...\n`);
@@ -173,7 +174,7 @@ async function generateOutput(
     return formatReadable(sankeyData);
   } else {
     // Default to SankeyMatic format
-    return formatSankeyMatic(sankeyData);
+    return formatSankeyMatic(sankeyData, { includeUrl: options.url });
   }
 }
 
@@ -242,6 +243,7 @@ function main(): void {
     .option('--min-amount-account <amount>', 'minimum total amount for accounts/nodes to include', parseFloat)
     .option('--min-account-grouping-amount <amount>', 'group accounts below this amount into [OTHER ACCOUNTS]', parseFloat)
     .option('--min-category-grouping-amount <amount>', 'group categories below this amount into [OTHER CATEGORIES]', parseFloat)
+    .option('--no-url', 'disable SankeyMatic URL generation in output (SankeyMatic format only)')
     .option('--disable-api-version-check', 'disable API version compatibility check (use at your own risk)')
     .addHelpText('after', `
 Environment Variables:
@@ -416,10 +418,21 @@ Examples:
         minAccountGroupingAmount: options.minAccountGroupingAmount,
         minCategoryGroupingAmount: options.minCategoryGroupingAmount,
         format: options.format,
+        url: options.url,
       });
 
       if (options.output) {
         writeToFile(output, options.output);
+
+        // If generating SankeyMatic format with URL, extract and print URL to console
+        if ((options.format === 'sankeymatic' || !options.format) && options.url !== false) {
+          const urlMatch = output.match(/https:\/\/sankeymatic\.com\/build\/\?i=[^\s\n]+/);
+          if (urlMatch) {
+            console.log('\n🔗 Direct Link to SankeyMatic:');
+            console.log(urlMatch[0]);
+            console.log('');
+          }
+        }
       } else {
         console.log(output);
       }

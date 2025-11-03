@@ -1,5 +1,6 @@
-import { formatSankeyMatic } from '../../../src/sankey/formatters';
+import { formatSankeyMatic, generateSankeyMaticUrl } from '../../../src/sankey/formatters';
 import { SankeyDiagram } from '../../../src/sankey/entities';
+import * as LZString from 'lz-string';
 
 describe('formatSankeyMatic', () => {
   const mockDiagram: SankeyDiagram = {
@@ -366,5 +367,101 @@ describe('formatSankeyMatic', () => {
     expect(result).not.toContain('undefined');
     expect(result).not.toContain('[100.00]');
     expect(result).not.toContain('[200.00]');
+  });
+
+  describe('URL generation', () => {
+    it('should include URL by default', () => {
+      const result = formatSankeyMatic(mockDiagram);
+
+      expect(result).toContain('// 🔗 Direct Link (click to open in SankeyMatic):');
+      expect(result).toContain('https://sankeymatic.com/build/?i=');
+    });
+
+    it('should not include URL when includeUrl is false', () => {
+      const result = formatSankeyMatic(mockDiagram, { includeUrl: false });
+
+      expect(result).not.toContain('// 🔗 Direct Link');
+      expect(result).not.toContain('https://sankeymatic.com/build/?i=');
+    });
+
+    it('should generate URL with valid compressed data', () => {
+      const result = formatSankeyMatic(mockDiagram);
+      const urlMatch = result.match(/https:\/\/sankeymatic\.com\/build\/\?i=([^\s\n]+)/);
+
+      expect(urlMatch).toBeTruthy();
+      if (urlMatch) {
+        const compressedData = urlMatch[1];
+        // Verify data can be decompressed
+        const decompressed = LZString.decompressFromEncodedURIComponent(compressedData);
+        expect(decompressed).toBeTruthy();
+        expect(typeof decompressed).toBe('string');
+      }
+    });
+
+    it('should generate URL without comment lines', () => {
+      const result = formatSankeyMatic(mockDiagram);
+      const urlMatch = result.match(/https:\/\/sankeymatic\.com\/build\/\?i=([^\s\n]+)/);
+
+      expect(urlMatch).toBeTruthy();
+      if (urlMatch) {
+        const compressedData = urlMatch[1];
+        const decompressed = LZString.decompressFromEncodedURIComponent(compressedData);
+
+        // Decompressed data should not contain comment lines
+        expect(decompressed).not.toContain('// Firefly III');
+        expect(decompressed).not.toContain('// Period:');
+        expect(decompressed).not.toContain('// Income Accounts');
+
+        // But should contain flow data
+        expect(decompressed).toContain('[3000.00]');
+        expect(decompressed).toContain('[1000.00]');
+      }
+    });
+  });
+});
+
+describe('generateSankeyMaticUrl', () => {
+  it('should generate valid URL with compressed data', () => {
+    const testData = 'Source [100.00] Target\nOther [50.00] Another';
+    const url = generateSankeyMaticUrl(testData);
+
+    expect(url).toContain('https://sankeymatic.com/build/?i=');
+
+    // Extract compressed data and verify it can be decompressed
+    const compressed = url.replace('https://sankeymatic.com/build/?i=', '');
+    const decompressed = LZString.decompressFromEncodedURIComponent(compressed);
+
+    expect(decompressed).toBe(testData);
+  });
+
+  it('should handle empty string', () => {
+    const url = generateSankeyMaticUrl('');
+
+    expect(url).toContain('https://sankeymatic.com/build/?i=');
+
+    const compressed = url.replace('https://sankeymatic.com/build/?i=', '');
+    const decompressed = LZString.decompressFromEncodedURIComponent(compressed);
+
+    expect(decompressed).toBe('');
+  });
+
+  it('should handle multiline data', () => {
+    const testData = 'Line 1\nLine 2\nLine 3';
+    const url = generateSankeyMaticUrl(testData);
+
+    const compressed = url.replace('https://sankeymatic.com/build/?i=', '');
+    const decompressed = LZString.decompressFromEncodedURIComponent(compressed);
+
+    expect(decompressed).toBe(testData);
+  });
+
+  it('should handle special characters', () => {
+    const testData = 'Account (Name) [100.50] Category & Budget';
+    const url = generateSankeyMaticUrl(testData);
+
+    const compressed = url.replace('https://sankeymatic.com/build/?i=', '');
+    const decompressed = LZString.decompressFromEncodedURIComponent(compressed);
+
+    expect(decompressed).toBe(testData);
   });
 });

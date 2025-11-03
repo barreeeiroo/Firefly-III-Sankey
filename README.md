@@ -477,6 +477,7 @@ firefly-iii-sankey -p 2024 --with-accounts \
 | `--min-amount-account <amount>` | | Minimum total for accounts (requires `--with-accounts`) | - |
 | `--min-account-grouping-amount <amount>` | | Group accounts below this into `[OTHER ACCOUNTS]` | - |
 | `--min-category-grouping-amount <amount>` | | Group categories below this into `[OTHER CATEGORIES]` | - |
+| `--no-url` | | Disable SankeyMatic URL generation in output | `false` |
 | `--disable-api-version-check` | | Bypass API version compatibility check (use at your own risk) | - |
 | `--version` | `-V` | Show version number | - |
 | `--help` | `-h` | Show help | - |
@@ -532,7 +533,18 @@ Monthly Budget [500.00] Groceries
 
 // Expense Categories -> Expense Accounts
 Groceries [500.00] Supermarket (-)
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔗 Direct Link (click to open in SankeyMatic):
+// https://sankeymatic.com/build/?i=...
 ```
+
+**Direct Link Feature:**
+- By default, the SankeyMatic format includes a clickable URL at the end
+- The URL contains your diagram data compressed and encoded
+- Click the link to instantly open your diagram in SankeyMatic
+- Use `--no-url` to disable URL generation
+- When saving to a file, the URL is also printed to the console for easy access
 
 Colors are automatically assigned by SankeyMatic when you paste the output into
 [sankeymatic.com/build](https://sankeymatic.com/build/).

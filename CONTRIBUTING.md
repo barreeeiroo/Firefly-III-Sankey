@@ -201,6 +201,7 @@ Transform processed Sankey data into various output formats.
 
 **SankeyMatic Formatter** (`sankeymatic.ts`)
 - Outputs format compatible with https://sankeymatic.com/build/
+- Generates compressed URLs for direct loading in SankeyMatic (using lz-string compression)
 - Colors are automatically assigned by SankeyMatic
 - Organized into commented sections:
   1. Income Accounts → Income Categories
@@ -209,6 +210,7 @@ Transform processed Sankey data into various output formats.
   4. Budgets → Expense Categories
   5. Expense Categories → Expense Accounts
   6. Direct flows (when budget/category absent)
+- Includes `generateSankeyMaticUrl()` function for URL generation
 
 **JSON Formatter** (`json.ts`)
 - Standard JSON output with full metadata

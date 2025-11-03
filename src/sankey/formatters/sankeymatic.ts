@@ -3,12 +3,21 @@
  */
 
 import { SankeyDiagram } from '../entities';
+import * as LZString from 'lz-string';
+
+/**
+ * Generate a SankeyMatic URL with encoded diagram data
+ */
+export function generateSankeyMaticUrl(diagramText: string): string {
+  const compressed = LZString.compressToEncodedURIComponent(diagramText);
+  return `https://sankeymatic.com/build/?i=${compressed}`;
+}
 
 /**
  * Format Sankey diagram data in SankeyMatic format
  * Output can be directly pasted into https://sankeymatic.com/build/
  */
-export function formatSankeyMatic(data: SankeyDiagram): string {
+export function formatSankeyMatic(data: SankeyDiagram, options?: { includeUrl?: boolean }): string {
   let output = `// Firefly III Sankey Diagram
 // Period: ${data.metadata.startDate} to ${data.metadata.endDate}
 // Generated: ${new Date(data.metadata.generatedAt).toLocaleString()}
@@ -165,6 +174,19 @@ export function formatSankeyMatic(data: SankeyDiagram): string {
       const target = data.nodes.find((n) => n.id === link.target);
       output += `${source?.name} [${link.value.toFixed(2)}] ${target?.name}\n`;
     }
+  }
+
+  // Append URL if requested
+  if (options?.includeUrl !== false) {
+    // Generate URL from the diagram data (without comments)
+    const diagramData = output.split('\n')
+      .filter(line => !line.trim().startsWith('//') && line.trim().length > 0)
+      .join('\n');
+
+    const url = generateSankeyMaticUrl(diagramData);
+    output += `\n// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    output += `// 🔗 Direct Link (click to open in SankeyMatic):\n`;
+    output += `// ${url}\n`;
   }
 
   return output;
