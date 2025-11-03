@@ -8,7 +8,9 @@
     "firefly-iii-sankey": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:bundle && npm run build:types",
+    "build:bundle": "node build.mjs",
+    "build:types": "tsc --emitDeclarationOnly --declaration --declarationMap",
     "prepublishOnly": "npm run build",
     "start": "npm run build && node dist/cli.js",
     "dev": "ts-node src/cli.ts",
@@ -58,6 +60,7 @@
     "@types/jest": "^30.0.0",
     "@types/lz-string": "^1.3.34",
     "@types/node": "^22.0.0",
+    "esbuild": "^0.25.12",
     "jest": "^30.2.0",
     "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",

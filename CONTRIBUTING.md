@@ -378,12 +378,32 @@ npm install
 # Run with ts-node (no build needed)
 npm run dev -- -u https://firefly.example.com -t token
 
-# Build
+# Build (uses esbuild for minified bundles)
 npm run build
 
 # Run built version
 npm start
 ```
+
+### Build Process
+
+The project uses **esbuild** for fast, minified builds optimized for npx usage:
+
+**Build Scripts:**
+- `npm run build` - Runs both bundling and type generation
+- `npm run build:bundle` - Creates minified JavaScript bundles using `build.mjs`
+- `npm run build:types` - Generates TypeScript declarations
+
+**Output:**
+- `dist/cli.js` (~81 KB) - Bundled CLI with all dependencies for fast npx execution
+- `dist/index.js` (~17 KB) - Library entry point (dependencies external)
+- Type declarations (`.d.ts` files) for TypeScript users
+
+**Why esbuild?**
+- Minified bundles reduce package size for faster `npx` downloads
+- Tree-shaking removes unused code
+- All dependencies bundled in CLI for zero-install execution
+- ~10x faster than tsc compilation
 
 ### Code Style
 
