@@ -281,6 +281,8 @@ firefly-iii-sankey -u https://firefly.example.com -t token \
 firefly-iii-sankey -u https://firefly.example.com -t token \
   --exclude-tags "internal,reimbursement"
 
+# Note: --include-tags and --exclude-tags cannot be used together
+
 # Only show transactions above $50
 firefly-iii-sankey -u https://firefly.example.com -t token \
   --min-amount-transaction 50
@@ -486,6 +488,8 @@ firefly-iii-sankey -p 2024 --with-accounts \
 - `--period` cannot be used together with `--start` or `--end`
 - `--min-amount-account` requires `--with-accounts` to be set
 - `--min-account-grouping-amount` requires `--with-accounts` to be set
+- `--no-url` only applies to SankeyMatic format (cannot be used with `-f json` or `-f readable`)
+- `--include-tags` and `--exclude-tags` cannot be used together (use one or the other)
 
 ## Output Formats
 
@@ -769,19 +773,6 @@ firefly-iii-sankey \
   -t token \
   -p 2024 \
   --exclude-tags "internal,reimbursement,duplicate"
-```
-
-### Example 17: Combined Tag Filtering
-
-Combine include and exclude tag filters (only show business expenses, but exclude reimbursements):
-
-```bash
-firefly-iii-sankey \
-  -u https://firefly.example.com \
-  -t token \
-  -p 2024 \
-  --include-tags "business,work" \
-  --exclude-tags "reimbursed"
 ```
 
 ## Development

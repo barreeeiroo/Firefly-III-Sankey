@@ -227,7 +227,9 @@ describe('filters', () => {
       expect(shouldExcludeTransaction(splitWithTags, options)).toBe(false);
     });
 
-    it('should handle both includeTags and excludeTags together', () => {
+    // Note: The CLI prevents using both includeTags and excludeTags together,
+    // but the filtering logic still handles it correctly for programmatic use
+    it('should handle both includeTags and excludeTags together (programmatic use)', () => {
       const splitWithTags = { ...mockSplit, tags: ['business', 'travel'] };
       const options: SankeyProcessorOptions = {
         startDate: '2024-01-01',
@@ -240,7 +242,7 @@ describe('filters', () => {
       expect(shouldExcludeTransaction(splitWithTags, options)).toBe(false);
     });
 
-    it('should exclude when transaction has both included and excluded tags', () => {
+    it('should exclude when transaction has both included and excluded tags (programmatic use)', () => {
       const splitWithTags = { ...mockSplit, tags: ['business', 'reimbursed'] };
       const options: SankeyProcessorOptions = {
         startDate: '2024-01-01',

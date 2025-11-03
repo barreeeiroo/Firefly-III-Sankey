@@ -396,6 +396,28 @@ Examples:
         process.exit(1);
       }
 
+      // Validate --no-url only works with sankeymatic format
+      if (options.url === false && options.format && options.format !== 'sankeymatic') {
+        console.error('\n❌ Invalid Option Combination');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('The --no-url option only applies to SankeyMatic format output.');
+        console.error('\nURL generation is only available for the SankeyMatic format.');
+        console.error('Either remove --no-url or use -f sankeymatic.\n');
+        process.exit(1);
+      }
+
+      // Validate include-tags and exclude-tags are not used together
+      if (options.includeTags && options.includeTags.length > 0 &&
+          options.excludeTags && options.excludeTags.length > 0) {
+        console.error('\n❌ Invalid Option Combination');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('Cannot use --include-tags and --exclude-tags together.');
+        console.error('\nPlease use either:');
+        console.error('  • --include-tags to only show transactions with specific tags');
+        console.error('  • --exclude-tags to hide transactions with specific tags\n');
+        process.exit(1);
+      }
+
       // Create client and display connection information
       const client = new FireflyClient({ baseUrl, token });
       await displayConnectionInfo(client, options.disableApiVersionCheck);
