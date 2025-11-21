@@ -7,22 +7,30 @@ import * as LZString from 'lz-string';
 
 /**
  * Generate a SankeyMatic URL with encoded diagram data
+ * @param diagramText The diagram text to encode
+ * @param baseUrl Optional custom SankeyMatic base URL (defaults to https://sankeymatic.com)
  */
-export function generateSankeyMaticUrl(diagramText: string): string {
+export function generateSankeyMaticUrl(diagramText: string, baseUrl?: string): string {
   const compressed = LZString.compressToEncodedURIComponent(diagramText);
-  return `https://sankeymatic.com/build/?i=${compressed}`;
+  const url = baseUrl || 'https://sankeymatic.com';
+  // Remove trailing slash if present
+  const cleanUrl = url.replace(/\/$/, '');
+  return `${cleanUrl}/build/?i=${compressed}`;
 }
 
 /**
  * Format Sankey diagram data in SankeyMatic format
  * Output can be directly pasted into https://sankeymatic.com/build/
  */
-export function formatSankeyMatic(data: SankeyDiagram, options?: { includeUrl?: boolean }): string {
+export function formatSankeyMatic(data: SankeyDiagram, options?: { includeUrl?: boolean; baseUrl?: string }): string {
+  const baseUrl = options?.baseUrl || 'https://sankeymatic.com';
+  const cleanUrl = baseUrl.replace(/\/$/, '');
+
   let output = `// Firefly III Sankey Diagram
 // Period: ${data.metadata.startDate} to ${data.metadata.endDate}
 // Generated: ${new Date(data.metadata.generatedAt).toLocaleString()}
 // Currency: ${data.metadata.currency}
-// Paste this into https://sankeymatic.com/build/
+// Paste this into ${cleanUrl}/build/
 
 `;
 
@@ -183,7 +191,7 @@ export function formatSankeyMatic(data: SankeyDiagram, options?: { includeUrl?: 
       .filter(line => !line.trim().startsWith('//') && line.trim().length > 0)
       .join('\n');
 
-    const url = generateSankeyMaticUrl(diagramData);
+    const url = generateSankeyMaticUrl(diagramData, options?.baseUrl);
     output += `\n// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     output += `// 🔗 Direct Link (click to open in SankeyMatic):\n`;
     output += `// ${url}\n`;

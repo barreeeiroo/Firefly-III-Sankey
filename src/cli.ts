@@ -129,6 +129,7 @@ async function generateOutput(
     minCategoryGroupingAmount?: number;
     format?: 'sankeymatic' | 'json' | 'readable';
     url?: boolean;
+    sankeymaticUrl?: string;
   }
 ): Promise<string> {
   console.log(`\nFetching transactions from ${options.start} to ${options.end}...\n`);
@@ -172,7 +173,7 @@ async function generateOutput(
     return formatReadable(sankeyData);
   } else {
     // Default to SankeyMatic format
-    return formatSankeyMatic(sankeyData, { includeUrl: options.url });
+    return formatSankeyMatic(sankeyData, { includeUrl: options.url, baseUrl: options.sankeymaticUrl });
   }
 }
 
@@ -242,6 +243,7 @@ function main(): void {
     .option('--min-account-grouping-amount <amount>', 'group accounts below this amount into [OTHER ACCOUNTS]', parseFloat)
     .option('--min-category-grouping-amount <amount>', 'group categories below this amount into [OTHER CATEGORIES]', parseFloat)
     .option('--no-url', 'disable SankeyMatic URL generation in output (SankeyMatic format only)')
+    .option('--sankeymatic-url <url>', 'custom SankeyMatic base URL (e.g., https://your-sankeymatic-instance.com)')
     .option('--disable-api-version-check', 'disable API version compatibility check (use at your own risk)')
     .addHelpText('after', `
 Environment Variables:
@@ -315,6 +317,7 @@ Examples:
       // Get credentials from options or environment variables
       const baseUrl = options.baseUrl || process.env.FIREFLY_BASE_URL;
       const token = options.apiToken || process.env.FIREFLY_API_TOKEN;
+      const sankeymaticUrl = options.sankeymaticUrl;
 
       if (!baseUrl || !token) {
         console.error('\n❌ Missing Required Parameters');
@@ -439,6 +442,7 @@ Examples:
         minCategoryGroupingAmount: options.minCategoryGroupingAmount,
         format: options.format,
         url: options.url,
+        sankeymaticUrl: sankeymaticUrl,
       });
 
       if (options.output) {
@@ -446,7 +450,7 @@ Examples:
 
         // If generating SankeyMatic format with URL, extract and print URL to console
         if ((options.format === 'sankeymatic' || !options.format) && options.url !== false) {
-          const urlMatch = output.match(/https:\/\/sankeymatic\.com\/build\/\?i=[^\s\n]+/);
+          const urlMatch = output.match(/https?:\/\/[^\s\n]+\/build\/\?i=[^\s\n]+/);
           if (urlMatch) {
             console.log('\n🔗 Direct Link to SankeyMatic:');
             console.log(urlMatch[0]);
