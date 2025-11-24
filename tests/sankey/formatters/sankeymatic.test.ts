@@ -417,6 +417,33 @@ describe('formatSankeyMatic', () => {
         expect(decompressed).toContain('[1000.00]');
       }
     });
+
+    it('should use custom base URL when provided', () => {
+      const customBaseUrl = 'https://my-sankeymatic.example.com';
+      const result = formatSankeyMatic(mockDiagram, { baseUrl: customBaseUrl });
+
+      expect(result).toContain('// 🔗 Direct Link (click to open in SankeyMatic):');
+      expect(result).toContain('https://my-sankeymatic.example.com/build/?i=');
+      expect(result).not.toContain('https://sankeymatic.com/build');
+    });
+
+    it('should use custom base URL with includeUrl option', () => {
+      const customBaseUrl = 'https://custom.example.com';
+      const result = formatSankeyMatic(mockDiagram, { includeUrl: true, baseUrl: customBaseUrl });
+
+      expect(result).toContain('https://custom.example.com/build/?i=');
+      expect(result).not.toContain('sankeymatic.com');
+    });
+
+    it('should not include URL when includeUrl is false even with custom base URL', () => {
+      const customBaseUrl = 'https://custom.example.com';
+      const result = formatSankeyMatic(mockDiagram, { includeUrl: false, baseUrl: customBaseUrl });
+
+      expect(result).not.toContain('// 🔗 Direct Link');
+      expect(result).not.toContain('/build/?i=');
+      // Should still contain the paste instruction with custom URL
+      expect(result).toContain('// Paste this into https://custom.example.com/build/');
+    });
   });
 });
 
@@ -463,5 +490,36 @@ describe('generateSankeyMaticUrl', () => {
     const decompressed = LZString.decompressFromEncodedURIComponent(compressed);
 
     expect(decompressed).toBe(testData);
+  });
+
+  it('should use custom base URL when provided', () => {
+    const testData = 'Source [100.00] Target';
+    const customBaseUrl = 'https://my-sankeymatic.example.com';
+    const url = generateSankeyMaticUrl(testData, customBaseUrl);
+
+    expect(url).toContain('https://my-sankeymatic.example.com/build/?i=');
+    expect(url).not.toContain('https://sankeymatic.com');
+
+    // Verify data is still compressed correctly
+    const compressed = url.replace('https://my-sankeymatic.example.com/build/?i=', '');
+    const decompressed = LZString.decompressFromEncodedURIComponent(compressed);
+    expect(decompressed).toBe(testData);
+  });
+
+  it('should handle custom base URL with trailing slash', () => {
+    const testData = 'Source [100.00] Target';
+    const customBaseUrl = 'https://my-sankeymatic.example.com/';
+    const url = generateSankeyMaticUrl(testData, customBaseUrl);
+
+    // Should normalize by removing trailing slash
+    expect(url).toContain('https://my-sankeymatic.example.com/build/?i=');
+    expect(url).not.toContain('//build');
+  });
+
+  it('should use default URL when custom base URL is undefined', () => {
+    const testData = 'Source [100.00] Target';
+    const url = generateSankeyMaticUrl(testData, undefined);
+
+    expect(url).toContain('https://sankeymatic.com/build/?i=');
   });
 });

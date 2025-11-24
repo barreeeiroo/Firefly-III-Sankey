@@ -480,6 +480,7 @@ firefly-iii-sankey -p 2024 --with-accounts \
 | `--min-account-grouping-amount <amount>` | | Group accounts below this into `[OTHER ACCOUNTS]` | - |
 | `--min-category-grouping-amount <amount>` | | Group categories below this into `[OTHER CATEGORIES]` | - |
 | `--no-url` | | Disable SankeyMatic URL generation in output | `false` |
+| `--sankeymatic-url <url>` | | Custom SankeyMatic base URL for self-hosted instances | `https://sankeymatic.com` |
 | `--disable-api-version-check` | | Bypass API version compatibility check (use at your own risk) | - |
 | `--version` | `-V` | Show version number | - |
 | `--help` | `-h` | Show help | - |
@@ -774,6 +775,21 @@ firefly-iii-sankey \
   -p 2024 \
   --exclude-tags "internal,reimbursement,duplicate"
 ```
+
+### Example 17: Self-Hosted SankeyMatic
+
+Use your own self-hosted SankeyMatic instance for privacy or customization:
+
+```bash
+firefly-iii-sankey \
+  -u https://firefly.example.com \
+  -t token \
+  -p 2024 \
+  -f sankeymatic \
+  --sankeymatic-url https://your-sankeymatic.example.com
+```
+
+This will generate URLs pointing to your custom SankeyMatic instance instead of the public one.
 
 ## Development
 
